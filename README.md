@@ -9,6 +9,10 @@ Most of the protocol is made from scratch, and some incompatibilities or securit
 
 A standard cargo project, just use `cargo run` / `cargo build` as always.
 
+## Useful documentations
+
+* https://www.bittorrent.org/beps/bep_0000.html
+
 ## License
 
 All pieces of this software are licensed under the MIT License, if not stated otherwise.
