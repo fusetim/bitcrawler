@@ -1,3 +1,5 @@
+use super::{BencodedValue, Error};
+
 /// Decodes a bencoded string from the given input.
 ///
 /// # Arguments
@@ -30,8 +32,6 @@
 /// let result = decode_string(&invalid_input);
 /// assert!(matches!(result, Err(Error::InvalidString)));
 /// ```
-use super::Error;
-
 pub fn decode_string<T>(input: &T) -> Result<(usize, String), Error>
 where
     T: AsRef<str>,
@@ -99,6 +99,149 @@ where
 
     // Return the decoded integer.
     Ok((end_index + 1, integer))
+}
+
+enum DecodeState {
+    Start,
+    Value(BencodedValue),
+    ListStart,
+    DictStart,
+    DictKey(String),
+    DictEntry(String, BencodedValue),
+}
+
+pub fn decode<T>(input: &T) -> Result<(usize, BencodedValue), Error>
+where
+    T: AsRef<str>,
+{
+    let input = input.as_ref();
+    let len = input.len();
+    let mut stack = Vec::new();
+    stack.push(DecodeState::Start);
+
+    let mut cursor = 0;
+    while cursor < len {
+        let char = &input[cursor..cursor+1];
+        let input_ = &input[cursor..];
+        match char {
+            "i" => {
+                let value = decode_integer(&input_)?;
+                cursor += value.0;
+                let state = stack.pop().expect("Invalid stack state");
+                match state {
+                    DecodeState::DictKey(key) => {
+                        stack.push(DecodeState::DictEntry(key, BencodedValue::Integer(value.1)));
+                    },
+                    _ => {
+                        stack.push(state);
+                        stack.push(DecodeState::Value(BencodedValue::Integer(value.1)));
+                    }
+                }
+            },
+            "l" => {
+                stack.push(DecodeState::ListStart);
+                cursor += 1;
+            },
+            "d" => {
+                stack.push(DecodeState::DictStart);
+                cursor += 1;
+            },
+            "e" => {
+                // End of dict/list
+                cursor += 1;
+                let mut values = Vec::new();
+                loop {
+                    if let Some(state) = stack.pop() {
+                        match state {
+                            DecodeState::ListStart => {
+                                let mut list = Vec::new();
+                                loop {
+                                    if let Some(DecodeState::Value(value)) = values.pop() {
+                                        list.push(value);
+                                    } else {
+                                       break;
+                                    }
+                                }
+                                if !values.is_empty() {
+                                    return Err(Error::InvalidValue);
+                                }
+                                if let Some(prev_state) = stack.pop() {
+                                    match prev_state {
+                                        DecodeState::DictKey(key) => {
+                                            stack.push(DecodeState::DictEntry(key, BencodedValue::List(list)));
+                                        },
+                                        _ => {
+                                            stack.push(prev_state);
+                                            stack.push(DecodeState::Value(BencodedValue::List(list)));
+                                        }
+                                    }
+                                } else {
+                                    unreachable!("Invalid stack state");
+                                }
+                                break;
+                            },
+                            DecodeState::DictStart => {
+                                let mut dict = Vec::new();
+                                loop {
+                                    if let Some(DecodeState::DictEntry(key, value)) = values.pop() {
+                                        dict.push((key, value));
+                                    } else {
+                                       break;
+                                    }
+                                }
+                                if !values.is_empty() {
+                                    return Err(Error::InvalidValue);
+                                }
+                                stack.push(DecodeState::Value(BencodedValue::Dict(dict)));
+                                break;
+                            },
+                            DecodeState::Value(_) => {
+                                values.push(state);
+                            },
+                            DecodeState::DictEntry(_, _) => {
+                                values.push(state);
+                            },
+                            _ => {
+                                return Err(Error::InvalidValue);
+                            }
+                        }
+                    } else {
+                        return Err(Error::InvalidValue);
+                    }
+                }
+            },
+            _ => {
+                let value = decode_string(&input_)?;
+                let state = stack.pop().expect("Invalid stack state");
+                cursor += value.0;
+                match state {
+                    DecodeState::DictKey(key) => {
+                        stack.push(DecodeState::DictEntry(key, BencodedValue::String(value.1)));
+                    },
+                    DecodeState::DictEntry(_, _) => {
+                        stack.push(state);
+                        stack.push(DecodeState::DictKey(value.1));
+                    },
+                    DecodeState::DictStart => {
+                        stack.push(state);
+                        stack.push(DecodeState::DictKey(value.1));
+                    },
+                    _ => {
+                        stack.push(state);
+                        stack.push(DecodeState::Value(BencodedValue::String(value.1)));
+                    }
+                }
+            }
+        }
+    }
+    if stack.len() != 2 {
+        return Err(Error::InvalidValue);
+    }
+    if let Some(DecodeState::Value(value)) = stack.pop() {
+        Ok((cursor, value))
+    } else {
+        Err(Error::InvalidValue)
+    }
 }
 
 #[cfg(test)]
@@ -222,5 +365,83 @@ mod tests {
         let input = "i0e";
         let result = decode_integer(&input);
         assert_eq!(result, Ok((3, 0)));
+    }
+
+    #[test]
+    fn test_valid_bencoded_list() {
+        let input = "l4:spam4:eggse";
+        let result = decode(&input);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.0, 14);
+        assert!(matches!(result.1, BencodedValue::List(_)));
+        let list = match result.1 {
+            BencodedValue::List(list) => list,
+            _ => panic!("Invalid value"),
+        };
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0], BencodedValue::String("spam".to_string()));
+        assert_eq!(list[1], BencodedValue::String("eggs".to_string()));
+    }
+
+    #[test]
+    fn test_valid_bencoded_dict() {
+        let input = "d3:cow3:moo4:spam4:eggse";
+        let result = decode(&input);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.0, 24);
+        assert!(matches!(result.1, BencodedValue::Dict(_)));
+        let dict = match result.1 {
+            BencodedValue::Dict(dict) => dict,
+            _ => panic!("Invalid value"),
+        };
+        assert_eq!(dict.len(), 2);
+        assert_eq!(dict[0], ("cow".to_string(), BencodedValue::String("moo".to_string())));
+        assert_eq!(dict[1], ("spam".to_string(), BencodedValue::String("eggs".to_string())));
+    }
+
+    #[test]
+    fn test_valid_bencoded_dict_with_list() {
+        let input = "d4:spamli4ei-4ei0eee";
+        let result = decode(&input);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.0, 20);
+        assert!(matches!(result.1, BencodedValue::Dict(_)));
+        let dict = match result.1 {
+            BencodedValue::Dict(dict) => dict,
+            _ => panic!("Invalid value"),
+        };
+        assert_eq!(dict.len(), 1);
+        assert_eq!(dict[0], ("spam".to_string(), BencodedValue::List(vec![
+            BencodedValue::Integer(4),
+            BencodedValue::Integer(-4),
+            BencodedValue::Integer(0),
+        ])));
+    }
+
+    #[test]
+    fn test_valid_bencoded_list_in_list() {
+        let input = "lli4ei-4ei0eee";
+        let result = decode(&input);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.0, 14);
+        assert!(matches!(result.1, BencodedValue::List(_)));
+        let list = match result.1 {
+            BencodedValue::List(list) => list,
+            _ => panic!("Invalid value"),
+        };
+        assert_eq!(list.len(), 1);
+        assert!(matches!(list[0], BencodedValue::List(_)));
+        let inner_list = match &list[0] {
+            BencodedValue::List(list) => list,
+            _ => panic!("Invalid value"),
+        };
+        assert_eq!(inner_list.len(), 3);
+        assert_eq!(inner_list[0], BencodedValue::Integer(4));
+        assert_eq!(inner_list[1], BencodedValue::Integer(-4));
+        assert_eq!(inner_list[2], BencodedValue::Integer(0));
     }
 }
