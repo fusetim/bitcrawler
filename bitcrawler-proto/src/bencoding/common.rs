@@ -4,15 +4,18 @@
 /// 
 /// - `String(String)`: Represents a Bencoded string.
 /// - `Integer(i64)`: Represents a Bencoded integer.
-/// - `List(Vec<BencodedValue>)`: Represents a Bencoded list, which is a collection of other Bencoded values.
-/// - `Dict(Vec<(String, BencodedValue)>)`: Represents a Bencoded dictionary, which is a collection of key-value pairs where keys are strings and values are other Bencoded values.
+/// - `List(BencodedList)`: Represents a Bencoded list, which is a collection of other Bencoded values.
+/// - `Dict(BencodedDict)`: Represents a Bencoded dictionary, which is a collection of key-value pairs where keys are strings and values are other Bencoded values.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BencodedValue {
     String(String),
     Integer(i64),
-    List(Vec<BencodedValue>),
-    Dict(Vec<(String, BencodedValue)>),
+    List(BencodedList),
+    Dict(BencodedDict),
 }
+
+pub type BencodedDict = Vec<(String, BencodedValue)>;
+pub type BencodedList = Vec<BencodedValue>;
 
 impl BencodedValue {
     pub fn from_string(input: String) -> Self {
