@@ -1,7 +1,7 @@
 /// Represents a value encoded in the Bencode format, which is commonly used in torrent files.
-/// 
+///
 /// # Variants
-/// 
+///
 /// - `String(String)`: Represents a Bencoded string.
 /// - `Integer(i64)`: Represents a Bencoded integer.
 /// - `List(BencodedList)`: Represents a Bencoded list, which is a collection of other Bencoded values.

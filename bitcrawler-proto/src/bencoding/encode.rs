@@ -1,73 +1,74 @@
-
 /// Encodes a string into a bencoded string.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `input` - The string to encode.
-/// 
+///
 /// # Returns
-/// 
+///
 /// A bencoded string.
-/// 
+///
 /// # What is the string encoded as?
-/// 
+///
 /// The string is encoded as follows:
 /// ```<length>:<string>```
-/// 
+///
 /// Where:
 /// * `<length>` is the length of the string.
 /// * `<string>` is the string itself.
-/// 
+///
 /// *Reference:* [BEP 3](https://www.bittorrent.org/beps/bep_0003.html)
 pub fn encode_string(input: &str) -> String {
     format!("{}:{}", input.len(), input)
 }
 
 /// Encodes an integer into a bencoded string.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `input` - The integer to encode.
-/// 
+///
 /// # Returns
-/// 
+///
 /// A bencoded string.
-/// 
+///
 /// # What is the integer encoded as?
-/// 
+///
 /// The integer is encoded as follows:
 /// ```i<integer>e```
-/// 
+///
 /// Where:
 /// * `<integer>` is the integer itself.
-/// 
+///
 /// **Note:** The integer is encoded as a signed integer, and leading zeros are not allowed.
-/// 
+///
 /// # Deviations from the specification
-/// 
+///
 /// The specification allows for arbitrary precision integers, but this implementation only supports 64-bit integers.
-/// 
+///
 /// *Reference:* [BEP 3](https://www.bittorrent.org/beps/bep_0003.html)
 pub fn encore_integer(input: i64) -> String {
     format!("i{}e", input)
 }
 
 /// Encodes a list of Bencoded value into a bencoded string.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `input` - The list of Bencoded value to encode.
-/// 
+///
 /// # Returns
-/// 
+///
 /// A bencoded string.
-/// 
+///
 /// # What is the list encoded as?
-/// 
+///
 /// The list is encoded as follows:
 /// ```l<element1><element2>...e```
 pub fn encode_list<T>(input: &[T]) -> String
-where T: AsRef<str> {
+where
+    T: AsRef<str>,
+{
     let mut result = String::from("l");
     for item in input {
         result.push_str(item.as_ref());
@@ -77,25 +78,27 @@ where T: AsRef<str> {
 }
 
 /// Encodes a dictionary of Bencoded value into a bencoded string.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `input` - The dictionary of Bencoded value to encode (key sorted).
-/// 
+///
 /// # Returns
-/// 
+///
 /// A bencoded string.
-/// 
+///
 /// # What is the dictionary encoded as?
-/// 
+///
 /// The dictionary is encoded as follows:
-/// 
+///
 /// ```d<key1><value1><key2><value2>...e```
-/// 
+///
 /// **Note:** The keys must be sorted.
 pub fn encode_dict<T, U>(input: &[(T, U)]) -> String
-where T: AsRef<str>,
-      U: AsRef<str> {
+where
+    T: AsRef<str>,
+    U: AsRef<str>,
+{
     let mut result = String::from("d");
     for (key, value) in input {
         result.push_str(key.as_ref());
@@ -104,7 +107,6 @@ where T: AsRef<str>,
     result.push('e');
     result
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -11,7 +11,10 @@ pub trait Address: PartialEq + Debug {}
 /// A `NodeId` is a type that represents a unique identifier for a node in a
 /// distributed system. This trait is intended to be implemented by types that
 /// represent node identifiers, such as public keys or hashes.
-pub trait NodeId: PartialEq + Debug + Eq + Xorable + PartialOrd + Ord + Clone + ToString + FromStr {}
+pub trait NodeId:
+    PartialEq + Debug + Eq + Xorable + PartialOrd + Ord + Clone + ToString + FromStr
+{
+}
 
 /// A trait that defines operations for comparing and calculating distances
 /// between elements in a XOR-based metric space, commonly used in distributed
@@ -64,7 +67,6 @@ pub struct RoutingTable<A: Address, N: NodeId> {
 }
 
 impl<A: Address, N: NodeId> Bucket<A, N> {
-
     /// Get the first node in the bucket.
     pub fn first(&self) -> Option<&Node<A, N>> {
         self.nodes.first()
@@ -90,8 +92,8 @@ impl<A: Address, N: NodeId> Bucket<A, N> {
         self.nodes.binary_search_by(|node| node.id.cmp(id))
     }
 
-    /// Insert a node into the bucket. 
-    /// 
+    /// Insert a node into the bucket.
+    ///
     /// If the node is already in the bucket, it will not be inserted.
     pub fn insert(&mut self, node: Node<A, N>) -> bool {
         match self.find(&node.id) {
@@ -104,28 +106,26 @@ impl<A: Address, N: NodeId> Bucket<A, N> {
     }
 
     /// Remove the node with the given id from the bucket.
-    /// 
+    ///
     /// Returns the removed node if it was found, otherwise None.
     pub fn remove(&mut self, id: &N) -> Option<Node<A, N>> {
         match self.find(id) {
-            Ok(index) => {
-                Some(self.nodes.remove(index))
-            }
+            Ok(index) => Some(self.nodes.remove(index)),
             Err(_) => None,
         }
     }
 
     /// Check if the bucket contains a node with the given id.
-    /// 
+    ///
     /// Returns true if the node is found, otherwise false.
     pub fn contains(&self, id: &N) -> bool {
         self.find(id).is_ok()
     }
 
     /// Check if the node with the given id is within the range of the bucket.
-    /// 
+    ///
     /// Returns true if the node is within the range, otherwise false.
-    /// 
+    ///
     /// TODO: Might not work as wanted, need to test.
     pub fn range_contains(&self, id: &N) -> bool {
         let first = self.first().expect("Bucket is empty");
@@ -142,9 +142,9 @@ impl<A: Address, N: NodeId> Bucket<A, N> {
 
 impl<A: Address, N: NodeId> RoutingTable<A, N> {
     /// Create a new `RoutingTable` with the given local id.
-    /// 
+    ///
     /// The `local_id` is the id of the node that owns the routing table.
-    /// 
+    ///
     /// The `bucket_size` is the maximum number of nodes that can be stored in a bucket. By default,
     /// the bucket size is set to 20.
     pub fn new(local_id: N) -> RoutingTable<A, N> {
@@ -198,9 +198,9 @@ impl<A: Address, N: NodeId> RoutingTable<A, N> {
     }
 
     /// Insert a node into the routing table.
-    /// 
+    ///
     /// Returns true if the node was inserted, otherwise false.
-    /// 
+    ///
     /// If the bucket that contains the node is full, it will be split into two new buckets
     /// if the local id is within the range of the bucket. Otherwise, the node will not be inserted.
     pub fn insert(&mut self, node: Node<A, N>) -> bool {
@@ -236,7 +236,7 @@ impl<A: Address, N: NodeId> RoutingTable<A, N> {
     }
 
     /// Split the bucket at the given index into two new buckets.
-    /// 
+    ///
     /// The bucket will be split into two new buckets based on the range of the node ids.
     /// The new buckets will be inserted into the routing table, and the old bucket will be removed.
     fn split_bucket(&mut self, index: usize) {
@@ -264,9 +264,9 @@ impl<A: Address, N: NodeId> RoutingTable<A, N> {
     }
 
     /// Remove the node with the given id from the routing table.
-    /// 
+    ///
     /// Returns the removed node if it was found, otherwise None.
-    /// 
+    ///
     /// If the bucket that contains the node is empty after removing the node, it will be removed.
     pub fn remove(&mut self, id: &N) -> Option<Node<A, N>> {
         let bucket_index = self.find_bucket_index(id);

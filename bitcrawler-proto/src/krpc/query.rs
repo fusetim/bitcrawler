@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     bencoding::{BencodedDict, BencodedValue},
-    kademlia::{NodeId},
+    kademlia::NodeId,
 };
 
 /// Query type associated for the `ping` query.
@@ -15,7 +15,7 @@ pub const QUERY_TYPE_GET_PEERS: &str = "get_peers";
 pub const QUERY_TYPE_ANNOUNCE_PEER: &str = "announce_peer";
 
 /// Represents a query message in the KRPC protocol.
-/// 
+///
 /// More information about the KRPC protocol can be found in the [specification](https://www.bittorrent.org/beps/bep_0005.html).
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Query<N: NodeId> {
@@ -24,7 +24,7 @@ pub struct Query<N: NodeId> {
 }
 
 /// Represents a query type in the KRPC protocol.
-/// 
+///
 /// Only 4 query types are supported: `ping`, `find_node`, `get_peers`, and `announce_peer`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum QueryType<N: NodeId> {
@@ -54,7 +54,7 @@ pub trait TryFromArguments {
 }
 
 /// Represents a `ping` query in the KRPC protocol.
-/// 
+///
 /// The `ping` query is used to check if a node is still alive.
 /// The only argument required for a `ping` query is the `id` of the node.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -63,7 +63,7 @@ pub struct Ping<N: NodeId> {
 }
 
 /// Represents a `find_node` query in the KRPC protocol.
-/// 
+///
 /// The `find_node` query is used to find the `k` nodes closest to a given target node.
 /// The arguments required for a `find_node` query are the `id` of the node and the `target` node.
 /// The `target` node is the node whose neighbors are being searched for.
@@ -74,7 +74,7 @@ pub struct FindNode<N: NodeId> {
 }
 
 /// Represents a `get_peers` query in the KRPC protocol.
-/// 
+///
 /// The `get_peers` query is used to find peers that are downloading a specific torrent.
 /// The arguments required for a `get_peers` query are the `id` of the node and the `info_hash` of the torrent.
 /// The `info_hash` is the SHA-1 hash of the metadata of the torrent.
@@ -86,7 +86,7 @@ pub struct GetPeers<N: NodeId> {
 }
 
 /// Represents an `announce_peer` query in the KRPC protocol.
-/// 
+///
 /// The `announce_peer` query is used to announce that the node is downloading a specific torrent.
 /// The arguments required for an `announce_peer` query are the `id` of the node, the `info_hash` of the torrent,
 /// the `port` on which the node is downloading the torrent, and a `token` received from a previous `get_peers` query.
@@ -264,8 +264,7 @@ impl<N: NodeId> TryFromArguments for FindNode<N> {
 }
 
 impl<N: NodeId> TryFromArguments for GetPeers<N> {
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError>
-    {
+    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError> {
         let (_, id) = arguments
             .iter()
             .find(|(key, _)| key == "id")
@@ -286,8 +285,7 @@ impl<N: NodeId> TryFromArguments for GetPeers<N> {
 }
 
 impl<N: NodeId> TryFromArguments for AnnouncePeer<N> {
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError>
-    {
+    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError> {
         let (mut id, mut info_hash, mut port, mut token) = (None, None, None, None);
         for (key, value) in arguments {
             match key.as_str() {
@@ -322,7 +320,7 @@ impl<N: NodeId> TryFromArguments for AnnouncePeer<N> {
                         return Err("Invalid 'token' field");
                     }
                 }
-                _ => {/* Ignore */},
+                _ => { /* Ignore */ }
             }
         }
         match (id, info_hash, port, token) {

@@ -1,16 +1,16 @@
 mod query;
 
-pub use query::*;
 use crate::{bencoding::BencodedValue, kademlia::NodeId};
+pub use query::*;
 
 /// Represents a KRPC message that can be either a query, a response, or an error.
-/// 
+///
 /// # Variants
-/// 
+///
 /// - `Query`: Represents a query message containing a `Query` object.
-/// 
+///
 /// # Type Parameters
-/// 
+///
 /// - `N`: A type that implements the `NodeId` trait, representing the identifier of a node in the network.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Message<N: NodeId> {
@@ -18,9 +18,9 @@ pub enum Message<N: NodeId> {
 }
 
 /// A trait for encoding and decoding messages using the Bencoding format.
-/// 
+///
 /// # Required Methods
-/// 
+///
 /// - `to_bencoded`: Converts the implementing type into a `BencodedValue`.
 /// - `from_bencoded`: Constructs an instance of the implementing type from a `BencodedValue`.
 pub trait BencodedMessage {

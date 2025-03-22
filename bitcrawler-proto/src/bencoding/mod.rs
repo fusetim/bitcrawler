@@ -1,9 +1,9 @@
-mod encode;
-mod decode;
 mod common;
+mod decode;
+mod encode;
 mod error;
 
-pub use encode::*;
-pub use decode::*;
 pub use common::*;
+pub use decode::*;
+pub use encode::*;
 pub use error::*;
