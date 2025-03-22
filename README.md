@@ -12,6 +12,8 @@ A standard cargo project, just use `cargo run` / `cargo build` as always.
 ## Useful documentations
 
 * https://www.bittorrent.org/beps/bep_0000.html
+* https://www.bittorrent.org/beps/bep_0051.html
+* https://medium.com/coinmonks/a-brief-overview-of-kademlia-and-its-use-in-various-decentralized-platforms-da08a7f72b8f
 
 ## License
 
