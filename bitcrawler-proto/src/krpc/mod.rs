@@ -1,7 +1,11 @@
 mod query;
+mod response;
+mod error;
 
 use crate::{bencoding::BencodedValue, kademlia::NodeId};
 pub use query::*;
+pub use response::*;
+pub use error::*;
 
 /// Represents a KRPC message that can be either a query, a response, or an error.
 ///
@@ -15,6 +19,7 @@ pub use query::*;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Message<N: NodeId> {
     Query(query::Query<N>),
+    Error(error::ErrorMessage),
 }
 
 /// A trait for encoding and decoding messages using the Bencoding format.
@@ -31,40 +36,27 @@ pub trait BencodedMessage {
     /// A `BencodedValue` representation of the message.
     fn to_bencoded(&self) -> BencodedValue;
 
-    /// Constructs a message from a `BencodedValue`.
-    ///
+    /// Constructs an instance of the message from a `BencodedValue`.
+    /// 
     /// # Parameters
-    ///
-    /// - `input`: A reference to a `BencodedValue` to decode.
-    ///
+    /// 
+    /// - `input`: The `BencodedValue` to construct the message from.
+    /// 
     /// # Returns
-    ///
-    /// An instance of the implementing type.
-    fn from_bencoded(input: &BencodedValue) -> Self;
+    /// 
+    /// A new instance of the message if the `BencodedValue` is valid, otherwise an error message.
+    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, String> where Self: Sized;
 }
 
 impl<N: NodeId> BencodedMessage for Message<N> {
-    /// Converts the `Message` into a `BencodedValue`.
-    ///
-    /// # Returns
-    ///
-    /// A `BencodedValue` representation of the `Message`.
     fn to_bencoded(&self) -> BencodedValue {
         match self {
             Message::Query(query) => query.to_bencoded(),
+            Message::Error(error) => error.to_bencoded(),
         }
     }
 
-    /// Constructs a `Message` from a `BencodedValue`.
-    ///
-    /// # Parameters
-    ///
-    /// - `input`: A reference to a `BencodedValue` to decode.
-    ///
-    /// # Panics
-    ///
-    /// This method is not yet implemented and will panic if called.
-    fn from_bencoded(input: &BencodedValue) -> Self {
-        unimplemented!()
+    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, String> {
+        todo!();
     }
 }
