@@ -110,6 +110,16 @@ enum DecodeState {
     DictEntry(String, BencodedValue),
 }
 
+/// Decodes a bencoded value from the given input.
+///
+/// # Arguments
+///
+/// * `input` - A reference to a type that implements `AsRef<str>`, representing the bencoded value.
+///
+/// # Returns
+///
+/// * `Ok(usize, BencodedValue)` - The decoded value if the input is valid and the number of characters read.
+/// * `Err(_)` - If the input is not a valid bencoded value.
 pub fn decode<T>(input: &T) -> Result<(usize, BencodedValue), Error>
 where
     T: AsRef<str>,
