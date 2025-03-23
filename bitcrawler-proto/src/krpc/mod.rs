@@ -45,7 +45,7 @@ pub trait BencodedMessage {
     /// # Returns
     /// 
     /// A new instance of the message if the `BencodedValue` is valid, otherwise an error message.
-    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, String> where Self: Sized;
+    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, &'static str> where Self: Sized;
 }
 
 impl<N: NodeId> BencodedMessage for Message<N> {
@@ -56,7 +56,22 @@ impl<N: NodeId> BencodedMessage for Message<N> {
         }
     }
 
-    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, String> {
-        todo!();
+    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, &'static str> {
+        let dict = match input {
+            BencodedValue::Dict(dict) => dict,
+            _ => return Err("Invalid message format"),
+        };
+
+        let y = match dict.iter().find(|(key, _)| key == "y") {
+            Some((_, BencodedValue::String(y))) => y,
+            _ => return Err("Missing 'y' key"),
+        };
+
+        match y.as_str() {
+            "q" => query::Query::try_from_bencoded(input).map(Message::Query),
+            //"r" => response::Response::try_from_bencoded(input).map(Message::Query),
+            "e" => error::ErrorMessage::try_from_bencoded(input).map(Message::Error),
+            _ => Err("Invalid message type"),
+        }
     }
 }
