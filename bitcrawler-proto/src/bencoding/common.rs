@@ -33,4 +33,17 @@ impl BencodedValue {
     pub fn from_dict(input: Vec<(String, BencodedValue)>) -> Self {
         BencodedValue::Dict(input)
     }
+
+    /// Sort the keys of all dictionaries to ensure consistent serialization (expected by the spec).
+    pub fn sort_keys(&mut self) {
+        match self {
+            BencodedValue::Dict(dict) => {
+                dict.sort_by(|(a, _), (b, _)| a.cmp(b));
+                for (_, value) in dict {
+                    value.sort_keys();
+                }
+            }
+            _ => {}
+        }
+    }
 }

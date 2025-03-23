@@ -334,3 +334,80 @@ impl<N: NodeId> TryFromArguments for AnnouncePeer<N> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use crate::kademlia::Xorable;
+
+    use super::*;
+
+    #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
+    struct MockNodeId(u64);
+
+    impl FromStr for MockNodeId {
+        type Err = &'static str;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.parse::<u64>() {
+                Ok(id) => Ok(MockNodeId(id)),
+                Err(_) => Err("Invalid NodeId"),
+            }
+        }
+    }
+
+    impl ToString for MockNodeId {
+        fn to_string(&self) -> String {
+            self.0.to_string()
+        }
+    }
+
+    impl Xorable for MockNodeId {
+        fn cmp_distance(&self, other: &Self) -> std::cmp::Ordering {
+            self.0.cmp(&other.0)
+        }
+    
+        fn bucket_index(&self, other: &Self) -> usize {
+            let x = self.0 ^ other.0;
+            let mut count = 0;
+            while (x >> count) > 1 {
+                count += 1;
+            }
+            return count;
+        }
+    }
+
+    impl NodeId for MockNodeId {}
+
+    #[test]
+    fn test_ping_query_to_bencoded() {
+        let query = Query::new(
+            "transaction_id".to_string(),
+            QueryType::Ping(Ping {
+                id: MockNodeId::from_str("25").unwrap(),
+            }),
+        );
+        let mut bencoded = query.to_bencoded();
+        let mut expected = BencodedValue::Dict(
+            vec![
+                ("t".to_string(), BencodedValue::String("transaction_id".to_string())),
+                ("y".to_string(), BencodedValue::String("q".to_string())),
+                ("q".to_string(), BencodedValue::String("ping".to_string())),
+                (
+                    "a".to_string(),
+                    BencodedValue::Dict(
+                        vec![("id".to_string(), BencodedValue::String("25".to_string()))]
+                            .into_iter()
+                            .collect(),
+                    ),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        bencoded.sort_keys();
+        expected.sort_keys();
+        assert_eq!(bencoded, expected);
+    }
+}
