@@ -283,3 +283,59 @@ impl<A: Address, N: NodeId> RoutingTable<A, N> {
         }
     }
 }
+
+impl<A: Address, N: NodeId> Node<A, N> {
+    /// Create a new `Node` with the given id and addresses.
+    pub fn new(id: N, addresses: Vec<A>) -> Node<A, N> {
+        Node { id, addresses }
+    }
+
+    /// Get the id of the node.
+    pub fn id(&self) -> &N {
+        &self.id
+    }
+
+    /// Get the addresses of the node.
+    /// 
+    /// Returns a reference to the list of addresses.
+    pub fn addresses(&self) -> &Vec<A> {
+        &self.addresses
+    }
+
+    /// Insert an address into the list of addresses.
+    pub fn insert_address(&mut self, address: A) {
+        self.addresses.push(address);
+    }
+
+    /// Remove an address from the list of addresses.
+    /// 
+    /// Returns true if the address was removed, otherwise false.
+    pub fn remove_address(&mut self, address: &A) -> bool {
+        let index = self.addresses.iter().position(|a| a == address);
+        match index {
+            Some(index) => {
+                self.addresses.remove(index);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Clear all addresses from the list.
+    pub fn clear_addresses(&mut self) {
+        self.addresses.clear();
+    }
+
+    /// Check if the node has any addresses.
+    pub fn has_addresses(&self) -> bool {
+        !self.addresses.is_empty()
+    }
+
+    /// Extend the list of addresses with the given iterator.
+    pub fn add_addresses<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = A>,
+    {
+        self.addresses.extend(iter);
+    }
+}
