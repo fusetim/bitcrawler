@@ -494,7 +494,7 @@ mod tests {
     }
 
     #[test]
-    fn test_valid_bencoded_dict_in_dict(){
+    fn test_valid_bencoded_dict_in_dict() {
         let input = "d3:cowd3:moo4:spamee";
         let result = decode(&input);
         assert!(result.is_ok());
@@ -508,9 +508,13 @@ mod tests {
         assert_eq!(dict.len(), 1);
         assert_eq!(
             dict[0],
-            ("cow".to_string(), BencodedValue::Dict(vec![
-                ("moo".to_string(), BencodedValue::String("spam".to_string())),
-            ]))
+            (
+                "cow".to_string(),
+                BencodedValue::Dict(vec![(
+                    "moo".to_string(),
+                    BencodedValue::String("spam".to_string())
+                ),])
+            )
         );
     }
 }

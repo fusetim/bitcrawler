@@ -296,7 +296,7 @@ impl<A: Address, N: NodeId> Node<A, N> {
     }
 
     /// Get the addresses of the node.
-    /// 
+    ///
     /// Returns a reference to the list of addresses.
     pub fn addresses(&self) -> &Vec<A> {
         &self.addresses
@@ -308,7 +308,7 @@ impl<A: Address, N: NodeId> Node<A, N> {
     }
 
     /// Remove an address from the list of addresses.
-    /// 
+    ///
     /// Returns true if the address was removed, otherwise false.
     pub fn remove_address(&mut self, address: &A) -> bool {
         let index = self.addresses.iter().position(|a| a == address);

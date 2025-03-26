@@ -1,9 +1,9 @@
 use crate::bencoding::BencodedValue;
 
 /// Represents an error message in a KRPC response.
-/// 
+///
 /// # Fields
-/// 
+///
 /// - `transaction_id`: The transaction ID of the request that caused the error.
 /// - `code`: The error code.
 /// - `message`: The error message.
@@ -33,15 +33,15 @@ pub enum ErrorCode {
 
 impl ErrorMessage {
     /// Constructs a new `ErrorMessage`.
-    /// 
+    ///
     /// # Parameters
-    /// 
+    ///
     /// - `transaction_id`: The transaction ID of the request that caused the error.
     /// - `code`: The error code.
     /// - `message`: The error message.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A new instance of `ErrorMessage`.
     pub fn new(transaction_id: String, code: ErrorCode, message: String) -> Self {
         Self {
@@ -54,12 +54,18 @@ impl ErrorMessage {
     /// Converts the `ErrorMessage` into a `BencodedValue`.
     pub fn to_bencoded(&self) -> BencodedValue {
         let mut dict = Vec::new();
-        dict.push(("t".to_string(), BencodedValue::String(self.transaction_id.clone())));
+        dict.push((
+            "t".to_string(),
+            BencodedValue::String(self.transaction_id.clone()),
+        ));
         dict.push(("y".to_string(), BencodedValue::String("e".to_string())));
-        dict.push(("e".to_string(), BencodedValue::List(vec![
-            BencodedValue::Integer(self.code as i64),
-            BencodedValue::String(self.message.clone()),
-        ])));
+        dict.push((
+            "e".to_string(),
+            BencodedValue::List(vec![
+                BencodedValue::Integer(self.code as i64),
+                BencodedValue::String(self.message.clone()),
+            ]),
+        ));
         BencodedValue::Dict(dict)
     }
 
@@ -106,7 +112,7 @@ impl ErrorMessage {
                         _ => return Err("expected string"),
                     };
                 }
-                _ => { /* Ignore */ },
+                _ => { /* Ignore */ }
             }
         }
 
@@ -144,16 +150,26 @@ mod tests {
 
     #[test]
     fn test_error_message_to_bencoded() {
-        let error = ErrorMessage::new("123".to_string(), ErrorCode::GenericError, "error message".to_string());
+        let error = ErrorMessage::new(
+            "123".to_string(),
+            ErrorCode::GenericError,
+            "error message".to_string(),
+        );
         let bencoded = error.to_bencoded();
-        assert_eq!(bencoded, BencodedValue::Dict(vec![
-            ("t".to_string(), BencodedValue::String("123".to_string())),
-            ("y".to_string(), BencodedValue::String("e".to_string())),
-            ("e".to_string(), BencodedValue::List(vec![
-                BencodedValue::Integer(201),
-                BencodedValue::String("error message".to_string()),
-            ])),
-        ]));
+        assert_eq!(
+            bencoded,
+            BencodedValue::Dict(vec![
+                ("t".to_string(), BencodedValue::String("123".to_string())),
+                ("y".to_string(), BencodedValue::String("e".to_string())),
+                (
+                    "e".to_string(),
+                    BencodedValue::List(vec![
+                        BencodedValue::Integer(201),
+                        BencodedValue::String("error message".to_string()),
+                    ])
+                ),
+            ])
+        );
     }
 
     #[test]
@@ -161,12 +177,22 @@ mod tests {
         let bencoded = BencodedValue::Dict(vec![
             ("t".to_string(), BencodedValue::String("123".to_string())),
             ("y".to_string(), BencodedValue::String("e".to_string())),
-            ("e".to_string(), BencodedValue::List(vec![
-                BencodedValue::Integer(201),
-                BencodedValue::String("error message".to_string()),
-            ])),
+            (
+                "e".to_string(),
+                BencodedValue::List(vec![
+                    BencodedValue::Integer(201),
+                    BencodedValue::String("error message".to_string()),
+                ]),
+            ),
         ]);
         let error = ErrorMessage::try_from_bencoded(&bencoded).unwrap();
-        assert_eq!(error, ErrorMessage::new("123".to_string(), ErrorCode::GenericError, "error message".to_string()));
+        assert_eq!(
+            error,
+            ErrorMessage::new(
+                "123".to_string(),
+                ErrorCode::GenericError,
+                "error message".to_string()
+            )
+        );
     }
 }

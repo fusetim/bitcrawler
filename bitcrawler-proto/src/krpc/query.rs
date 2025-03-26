@@ -5,6 +5,8 @@ use crate::{
     kademlia::NodeId,
 };
 
+use super::{ToArguments, TryFromArguments, TryFromArgumentsError};
+
 /// Query type associated for the `ping` query.
 pub const QUERY_TYPE_PING: &str = "ping";
 /// Query type associated for the `find_node` query.
@@ -36,21 +38,6 @@ pub enum QueryType<N: NodeId> {
     GetPeers(GetPeers<N>),
     /// Represents an `announce_peer` query.
     AnnouncePeer(AnnouncePeer<N>),
-}
-
-/// A trait for converting a type into a collection of key-value pairs, called arguments in the KRPC protocol.
-pub trait ToArguments {
-    /// Converts the implementing type into a collection of key-value pairs.
-    fn to_arguments(&self) -> HashMap<String, BencodedValue>;
-}
-
-/// A trait for converting a collection of key-value pairs, called arguments in the KRPC protocol, into a type.
-pub type TryFromArgumentsError = &'static str;
-pub trait TryFromArguments {
-    /// Constructs an instance of the implementing type from a collection of key-value pairs.
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError>
-    where
-        Self: Sized;
 }
 
 /// Represents a `ping` query in the KRPC protocol.
@@ -339,46 +326,8 @@ impl<N: NodeId> TryFromArguments for AnnouncePeer<N> {
 mod tests {
     use std::str::FromStr;
 
-    use crate::kademlia::Xorable;
-
+    use super::super::tests::MockNodeId;
     use super::*;
-
-    #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
-    struct MockNodeId(u64);
-
-    impl FromStr for MockNodeId {
-        type Err = &'static str;
-
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s.parse::<u64>() {
-                Ok(id) => Ok(MockNodeId(id)),
-                Err(_) => Err("Invalid NodeId"),
-            }
-        }
-    }
-
-    impl ToString for MockNodeId {
-        fn to_string(&self) -> String {
-            self.0.to_string()
-        }
-    }
-
-    impl Xorable for MockNodeId {
-        fn cmp_distance(&self, other: &Self) -> std::cmp::Ordering {
-            self.0.cmp(&other.0)
-        }
-    
-        fn bucket_index(&self, other: &Self) -> usize {
-            let x = self.0 ^ other.0;
-            let mut count = 0;
-            while (x >> count) > 1 {
-                count += 1;
-            }
-            return count;
-        }
-    }
-
-    impl NodeId for MockNodeId {}
 
     #[test]
     fn test_ping_query_to_bencoded() {
@@ -391,7 +340,10 @@ mod tests {
         let mut bencoded = query.to_bencoded();
         let mut expected = BencodedValue::Dict(
             vec![
-                ("t".to_string(), BencodedValue::String("transaction_id".to_string())),
+                (
+                    "t".to_string(),
+                    BencodedValue::String("transaction_id".to_string()),
+                ),
                 ("y".to_string(), BencodedValue::String("q".to_string())),
                 ("q".to_string(), BencodedValue::String("ping".to_string())),
                 (
