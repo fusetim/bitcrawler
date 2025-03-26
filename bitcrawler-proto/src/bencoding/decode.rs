@@ -101,6 +101,7 @@ where
     Ok((end_index + 1, integer))
 }
 
+#[derive(Debug, PartialEq, Eq)]
 enum DecodeState {
     Start,
     Value(BencodedValue),
@@ -207,7 +208,24 @@ where
                                 if !values.is_empty() {
                                     return Err(Error::InvalidValue);
                                 }
-                                stack.push(DecodeState::Value(BencodedValue::Dict(dict)));
+                                if let Some(prev_state) = stack.pop() {
+                                    match prev_state {
+                                        DecodeState::DictKey(key) => {
+                                            stack.push(DecodeState::DictEntry(
+                                                key,
+                                                BencodedValue::Dict(dict),
+                                            ));
+                                        }
+                                        _ => {
+                                            stack.push(prev_state);
+                                            stack.push(DecodeState::Value(BencodedValue::Dict(
+                                                dict,
+                                            )));
+                                        }
+                                    }
+                                } else {
+                                    unreachable!("Invalid stack state");
+                                }
                                 break;
                             }
                             DecodeState::Value(_) => {
@@ -473,5 +491,26 @@ mod tests {
         assert_eq!(inner_list[0], BencodedValue::Integer(4));
         assert_eq!(inner_list[1], BencodedValue::Integer(-4));
         assert_eq!(inner_list[2], BencodedValue::Integer(0));
+    }
+
+    #[test]
+    fn test_valid_bencoded_dict_in_dict(){
+        let input = "d3:cowd3:moo4:spamee";
+        let result = decode(&input);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.0, 20);
+        assert!(matches!(result.1, BencodedValue::Dict(_)));
+        let dict = match result.1 {
+            BencodedValue::Dict(dict) => dict,
+            _ => panic!("Invalid value"),
+        };
+        assert_eq!(dict.len(), 1);
+        assert_eq!(
+            dict[0],
+            ("cow".to_string(), BencodedValue::Dict(vec![
+                ("moo".to_string(), BencodedValue::String("spam".to_string())),
+            ]))
+        );
     }
 }
