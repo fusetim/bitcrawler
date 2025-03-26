@@ -11,9 +11,11 @@ A standard cargo project, just use `cargo run` / `cargo build` as always.
 
 ## Useful documentations
 
-* https://www.bittorrent.org/beps/bep_0000.html
-* https://www.bittorrent.org/beps/bep_0051.html
-* https://medium.com/coinmonks/a-brief-overview-of-kademlia-and-its-use-in-various-decentralized-platforms-da08a7f72b8f
+* [BEP0000 - Index of BitTorrent Enhancement Proposals](https://www.bittorrent.org/beps/bep_0000.html)
+* [BEP0005 - DHT Protocol](https://www.bittorrent.org/beps/bep_0005.html)
+* [BEP0009 - Extension for Peers to Send Metadata Files (Magnet)](https://www.bittorrent.org/beps/bep_0009.html)
+* [BEP0051 - DHT Infohash Indexing](https://www.bittorrent.org/beps/bep_0051.html)
+* [A Brief Overview of Kademlia, and its use in various decentralized platforms, Kevin Leffew](https://medium.com/coinmonks/a-brief-overview-of-kademlia-and-its-use-in-various-decentralized-platforms-da08a7f72b8f)
 
 ## License
 
