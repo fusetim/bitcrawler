@@ -1,4 +1,5 @@
 mod error;
+pub mod node_info;
 pub mod query;
 pub mod response;
 
@@ -100,13 +101,75 @@ pub trait TryFromArguments {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{node_info::CompactNodeInfo, *};
     use std::str::FromStr;
 
     use crate::kademlia::Xorable;
 
     #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
     pub struct MockNodeId(pub u64);
+
+    pub type MockNodeInfo = node_info::BittorrentNodeInfoV4<MockNodeId>;
+    pub struct MockAddress {
+        pub ip: [u8; 4],
+        pub port: u16,
+    }
+
+    impl NodeId for MockNodeId {}
+
+    impl node_info::NodeInfo for MockNodeInfo {
+        type NodeId = MockNodeId;
+        type Address = MockAddress;
+
+        fn get_node_id(&self) -> &Self::NodeId {
+            &self.node_id
+        }
+
+        fn to_address(&self) -> Self::Address {
+            MockAddress {
+                ip: self.ip,
+                port: self.port,
+            }
+        }
+
+        fn new_with_address(node_id: Self::NodeId, address: Self::Address) -> Self {
+            MockNodeInfo {
+                node_id,
+                ip: address.ip,
+                port: address.port,
+            }
+        }
+    }
+
+    impl CompactNodeInfo for MockNodeInfo {
+        type Error = &'static str;
+
+        fn try_read_compact_node_info(data: &str) -> Result<(usize, Self), Self::Error> {
+            let mut iter = data.bytes();
+            let node_id = MockNodeId(
+                iter.by_ref()
+                    .take(8)
+                    .fold(0u64, |acc, x| (acc << 8) | x as u64),
+            );
+            let ip = [
+                iter.next().ok_or("Invalid compact node info")?,
+                iter.next().ok_or("Invalid compact node info")?,
+                iter.next().ok_or("Invalid compact node info")?,
+                iter.next().ok_or("Invalid compact node info")?,
+            ];
+            let port = ((iter.next().ok_or("Invalid compact node info")? as u16) << 8)
+                | iter.next().ok_or("Invalid compact node info")? as u16;
+            Ok((14, MockNodeInfo { node_id, ip, port }))
+        }
+
+        fn write_compact_node_info(&self) -> std::borrow::Cow<str> {
+            let mut data = Vec::with_capacity(6);
+            data.extend_from_slice(&self.node_id.0.to_be_bytes());
+            data.extend_from_slice(&self.ip);
+            data.extend_from_slice(&self.port.to_be_bytes());
+            String::from_utf8(data).unwrap().into()
+        }
+    }
 
     impl FromStr for MockNodeId {
         type Err = &'static str;
@@ -139,6 +202,4 @@ mod tests {
             return count;
         }
     }
-
-    impl NodeId for MockNodeId {}
 }
