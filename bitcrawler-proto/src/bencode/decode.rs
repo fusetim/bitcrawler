@@ -22,7 +22,7 @@ use super::{BencodeString, BencodeValue, Error};
 /// # Examples
 ///
 /// ```rust
-/// use bitcrawler_proto::bencoding::{decode_string, Error};
+/// use bitcrawler_proto::bencode::{decode_string, Error};
 ///
 /// let input = b"4:spam";
 /// let result = decode_string(&input);

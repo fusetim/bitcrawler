@@ -6,7 +6,7 @@ pub mod response;
 use std::collections::HashMap;
 
 use crate::{
-    bencoding::{BencodeDict, BencodeValue},
+    bencode::{BencodeDict, BencodeValue},
     kademlia::NodeId,
 };
 pub use error::*;

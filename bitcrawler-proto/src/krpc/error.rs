@@ -1,4 +1,4 @@
-use crate::bencoding::BencodeValue;
+use crate::bencode::BencodeValue;
 
 /// Represents an error message in a KRPC response.
 ///

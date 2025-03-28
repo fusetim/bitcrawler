@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::Add};
 use std::str::FromStr;
 
 use crate::{
-    bencoding::{BencodeDict, BencodeValue},
+    bencode::{BencodeDict, BencodeValue},
     kademlia::{Address, NodeId},
 };
 
@@ -331,7 +331,7 @@ mod tests {
     #[test]
     fn test_ping_response_from_spec_bencoded() {
         let bencoded_string = "d1:rd2:id6:123456e1:t2:aa1:y1:re";
-        let (_, bencoded) = crate::bencoding::decode(&bencoded_string).unwrap();
+        let (_, bencoded) = crate::bencode::decode(&bencoded_string).unwrap();
         let response = Response::<MockNodeInfo>::try_from_ping_bencoded(&bencoded).unwrap();
         assert_eq!(
             response,
