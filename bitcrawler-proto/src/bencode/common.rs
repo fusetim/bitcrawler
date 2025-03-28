@@ -17,7 +17,7 @@ pub enum BencodeValue {
 }
 
 /// Represents a Bencoded (byte) string.
-#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord, Hash)]
 pub struct BencodeString(pub Vec<u8>);
 
 /// Represents a Bencoded dictionary, which is a collection of key-value pairs where keys are strings and values are other Bencoded values.
@@ -79,6 +79,12 @@ impl From<&str> for BencodeString {
     }
 }
 
+impl From<&[u8]> for BencodeString {
+    fn from(input: &[u8]) -> Self {
+        BencodeString(input.to_vec())
+    }
+}
+
 impl From<Vec<u8>> for BencodeString {
     fn from(input: Vec<u8>) -> Self {
         BencodeString(input)
@@ -109,6 +115,12 @@ impl TryFrom<BencodeString> for String {
 
     fn try_from(input: BencodeString) -> Result<Self, Self::Error> {
         String::from_utf8(input.0)
+    }
+}
+
+impl AsRef<[u8]> for BencodeString {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 

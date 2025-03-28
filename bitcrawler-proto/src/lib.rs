@@ -1,3 +1,3 @@
 pub mod bencode;
 pub mod kademlia;
-//pub mod krpc;
+pub mod krpc;
