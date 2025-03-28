@@ -6,7 +6,7 @@ pub mod response;
 use std::collections::HashMap;
 
 use crate::{
-    bencoding::{BencodedDict, BencodedValue},
+    bencoding::{BencodeDict, BencodeValue},
     kademlia::NodeId,
 };
 pub use error::*;
@@ -40,7 +40,7 @@ pub trait BencodedMessage {
     /// # Returns
     ///
     /// A `BencodedValue` representation of the message.
-    fn to_bencoded(&self) -> BencodedValue;
+    fn to_bencoded(&self) -> BencodeValue;
 
     /// Constructs an instance of the message from a `BencodedValue`.
     ///
@@ -51,27 +51,27 @@ pub trait BencodedMessage {
     /// # Returns
     ///
     /// A new instance of the message if the `BencodedValue` is valid, otherwise an error message.
-    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, &'static str>
+    fn try_from_bencoded(input: &BencodeValue) -> Result<Self, &'static str>
     where
         Self: Sized;
 }
 
 impl<N: NodeId> BencodedMessage for Message<N> {
-    fn to_bencoded(&self) -> BencodedValue {
+    fn to_bencoded(&self) -> BencodeValue {
         match self {
             Message::Query(query) => query.to_bencoded(),
             Message::Error(error) => error.to_bencoded(),
         }
     }
 
-    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, &'static str> {
+    fn try_from_bencoded(input: &BencodeValue) -> Result<Self, &'static str> {
         let dict = match input {
-            BencodedValue::Dict(dict) => dict,
+            BencodeValue::Dict(dict) => dict,
             _ => return Err("Invalid message format"),
         };
 
         let y = match dict.iter().find(|(key, _)| key == "y") {
-            Some((_, BencodedValue::String(y))) => y,
+            Some((_, BencodeValue::String(y))) => y,
             _ => return Err("Missing 'y' key"),
         };
 
@@ -87,14 +87,14 @@ impl<N: NodeId> BencodedMessage for Message<N> {
 /// A trait for converting a type into a collection of key-value pairs, called arguments in the KRPC protocol.
 pub trait ToArguments {
     /// Converts the implementing type into a collection of key-value pairs.
-    fn to_arguments(&self) -> HashMap<String, BencodedValue>;
+    fn to_arguments(&self) -> HashMap<String, BencodeValue>;
 }
 
 /// A trait for converting a collection of key-value pairs, called arguments in the KRPC protocol, into a type.
 pub type TryFromArgumentsError = &'static str;
 pub trait TryFromArguments {
     /// Constructs an instance of the implementing type from a collection of key-value pairs.
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError>
+    fn try_from_arguments(arguments: &BencodeDict) -> Result<Self, TryFromArgumentsError>
     where
         Self: Sized;
 }

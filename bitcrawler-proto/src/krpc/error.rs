@@ -1,4 +1,4 @@
-use crate::bencoding::BencodedValue;
+use crate::bencoding::BencodeValue;
 
 /// Represents an error message in a KRPC response.
 ///
@@ -52,27 +52,27 @@ impl ErrorMessage {
     }
 
     /// Converts the `ErrorMessage` into a `BencodedValue`.
-    pub fn to_bencoded(&self) -> BencodedValue {
+    pub fn to_bencoded(&self) -> BencodeValue {
         let mut dict = Vec::new();
         dict.push((
             "t".to_string(),
-            BencodedValue::String(self.transaction_id.clone()),
+            BencodeValue::String(self.transaction_id.clone()),
         ));
-        dict.push(("y".to_string(), BencodedValue::String("e".to_string())));
+        dict.push(("y".to_string(), BencodeValue::String("e".to_string())));
         dict.push((
             "e".to_string(),
-            BencodedValue::List(vec![
-                BencodedValue::Integer(self.code as i64),
-                BencodedValue::String(self.message.clone()),
+            BencodeValue::List(vec![
+                BencodeValue::Integer(self.code as i64),
+                BencodeValue::String(self.message.clone()),
             ]),
         ));
-        BencodedValue::Dict(dict)
+        BencodeValue::Dict(dict)
     }
 
     /// Constructs an instance of `ErrorMessage` from a `BencodedValue`.
-    pub fn try_from_bencoded(input: &BencodedValue) -> Result<Self, &'static str> {
+    pub fn try_from_bencoded(input: &BencodeValue) -> Result<Self, &'static str> {
         let dict = match input {
-            BencodedValue::Dict(dict) => dict,
+            BencodeValue::Dict(dict) => dict,
             _ => return Err("expected dictionary"),
         };
 
@@ -84,13 +84,13 @@ impl ErrorMessage {
             match key.as_str() {
                 "t" => {
                     transaction_id = match value {
-                        BencodedValue::String(s) => Some(s.clone()),
+                        BencodeValue::String(s) => Some(s.clone()),
                         _ => return Err("expected string"),
                     };
                 }
                 "e" => {
                     let list = match value {
-                        BencodedValue::List(list) => list,
+                        BencodeValue::List(list) => list,
                         _ => return Err("expected list"),
                     };
 
@@ -99,7 +99,7 @@ impl ErrorMessage {
                     }
 
                     let code_ = match &list[0] {
-                        BencodedValue::Integer(i) => *i,
+                        BencodeValue::Integer(i) => *i,
                         _ => return Err("expected integer"),
                     };
                     code = match ErrorCode::try_from(code_) {
@@ -108,7 +108,7 @@ impl ErrorMessage {
                     };
 
                     message = match &list[1] {
-                        BencodedValue::String(s) => Some(s.clone()),
+                        BencodeValue::String(s) => Some(s.clone()),
                         _ => return Err("expected string"),
                     };
                 }
@@ -158,14 +158,14 @@ mod tests {
         let bencoded = error.to_bencoded();
         assert_eq!(
             bencoded,
-            BencodedValue::Dict(vec![
-                ("t".to_string(), BencodedValue::String("123".to_string())),
-                ("y".to_string(), BencodedValue::String("e".to_string())),
+            BencodeValue::Dict(vec![
+                ("t".to_string(), BencodeValue::String("123".to_string())),
+                ("y".to_string(), BencodeValue::String("e".to_string())),
                 (
                     "e".to_string(),
-                    BencodedValue::List(vec![
-                        BencodedValue::Integer(201),
-                        BencodedValue::String("error message".to_string()),
+                    BencodeValue::List(vec![
+                        BencodeValue::Integer(201),
+                        BencodeValue::String("error message".to_string()),
                     ])
                 ),
             ])
@@ -174,14 +174,14 @@ mod tests {
 
     #[test]
     fn test_error_message_try_from_bencoded() {
-        let bencoded = BencodedValue::Dict(vec![
-            ("t".to_string(), BencodedValue::String("123".to_string())),
-            ("y".to_string(), BencodedValue::String("e".to_string())),
+        let bencoded = BencodeValue::Dict(vec![
+            ("t".to_string(), BencodeValue::String("123".to_string())),
+            ("y".to_string(), BencodeValue::String("e".to_string())),
             (
                 "e".to_string(),
-                BencodedValue::List(vec![
-                    BencodedValue::Integer(201),
-                    BencodedValue::String("error message".to_string()),
+                BencodeValue::List(vec![
+                    BencodeValue::Integer(201),
+                    BencodeValue::String("error message".to_string()),
                 ]),
             ),
         ]);

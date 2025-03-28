@@ -1,14 +1,14 @@
-use super::{BencodedValue, Error};
+use super::{BencodeString, BencodeValue, Error};
 
 /// Decodes a bencoded string from the given input.
 ///
 /// # Arguments
 ///
-/// * `input` - A reference to a type that implements `AsRef<str>`, representing the bencoded string.
+/// * `input` - A reference to a type that implements `AsRef<[u8]>`, representing the bencoded string.
 ///
 /// # Returns
 ///
-/// * `Ok(usize, String)` - The decoded string if the input is valid and the number of characters read.
+/// * `Ok(usize, BencodeString)` - The decoded string if the input is valid and the number of characters read.
 /// * `Err(Error::InvalidString)` - If the input is not a valid bencoded string.
 ///
 /// # Errors
@@ -24,29 +24,40 @@ use super::{BencodedValue, Error};
 /// ```rust
 /// use bitcrawler_proto::bencoding::{decode_string, Error};
 ///
-/// let input = "4:spam";
+/// let input = b"4:spam";
 /// let result = decode_string(&input);
-/// assert_eq!(result, Ok((6, "spam".to_string())));
+/// assert_eq!(result, Ok((6, "spam".into())));
 ///
-/// let invalid_input = "4spam";
+/// let invalid_input = b"4spam";
 /// let result = decode_string(&invalid_input);
 /// assert!(matches!(result, Err(Error::InvalidString)));
 /// ```
-pub fn decode_string<T>(input: &T) -> Result<(usize, String), Error>
+pub fn decode_string<T>(input: &T) -> Result<(usize, BencodeString), Error>
 where
-    T: AsRef<str>,
+    T: AsRef<[u8]>,
 {
     let input = input.as_ref();
 
     // Find the separator index and parse the length.
-    let separator_index = input.find(':').ok_or(Error::InvalidString)?;
-    let length = input[..separator_index]
-        .parse::<usize>()
-        .map_err(|_| Error::InvalidString)?;
+    let separator_index = input
+        .iter()
+        .position(|&c| c == b':')
+        .ok_or(Error::InvalidString)?;
+    let length = {
+        let length_str = &input[0..separator_index];
+        let mut value  = 0;
+        for &c in length_str {
+            if c < b'0' || c > b'9' {
+                return Err(Error::InvalidString);
+            }
+            value = value * 10 + (c - b'0') as usize;
+        }
+        value
+    };
 
     // Return the decoded string if the length is valid.
     if length == 0 {
-        return Ok((separator_index + 1, "".to_string()));
+        return Ok((separator_index + 1, BencodeString(vec![])));
     } else if length > input.len() - separator_index - 1 {
         return Err(Error::InvalidString);
     } else {
@@ -54,7 +65,7 @@ where
         // The length is the number of bytes to read a fortiori.
         return Ok((
             separator_index + length + 1,
-            input[separator_index + 1..separator_index + 1 + length].to_string(),
+            input[separator_index + 1..separator_index + 1 + length].to_vec().into(),
         ));
     }
 }
@@ -63,11 +74,11 @@ where
 ///
 /// # Arguments
 ///
-/// * `input` - A reference to a type that implements `AsRef<str>`, representing the bencoded integer.
+/// * `input` - A reference to a type that implements `AsRef<[u8]>`, representing the bencoded integer.
 ///
 /// # Returns
 ///
-/// * `Ok(usize, i64)` - The decoded integer if the input is valid and the number of characters read.
+/// * `Ok(usize, i128)` - The decoded integer if the input is valid and the number of characters read.
 /// * `Err(Error::InvalidInteger)` - If the input is not a valid bencoded integer.
 ///
 /// # Errors
@@ -77,24 +88,28 @@ where
 /// - The input does not start with the `i` character.
 /// - The input does not contain the `e` character.
 /// - The integer is not a valid signed integer.
-/// - The integer is not within the range of `i64` (spec does not specify a maximum size).
+/// - The integer is not within the range of `i128` (spec does not specify a maximum size).
 ///
 /// This function will not return an error if the integer is prefixed with zeros (e.g., `i000e`).
-pub fn decode_integer<T>(input: &T) -> Result<(usize, i64), Error>
+pub fn decode_integer<T>(input: &T) -> Result<(usize, i128), Error>
 where
-    T: AsRef<str>,
+    T: AsRef<[u8]>,
 {
     let input = input.as_ref();
 
     // Find the separator indices.
-    if &input[0..1] != "i" {
+    if input[0] != b'i' {
         return Err(Error::InvalidInteger);
     }
-    let end_index = input.find('e').ok_or(Error::InvalidInteger)?;
+    let end_index = input.iter().position(|&c| c == b'e').ok_or(Error::InvalidInteger)?;
+    if end_index == 0 {
+        return Err(Error::InvalidInteger);
+    }
 
     // Parse the integer.
-    let integer = input[1..end_index]
-        .parse::<i64>()
+    let integer_string = String::from_utf8_lossy(&input[1..end_index]);
+    let integer = integer_string
+        .parse::<i128>()
         .map_err(|_| Error::InvalidInteger)?;
 
     // Return the decoded integer.
@@ -104,26 +119,26 @@ where
 #[derive(Debug, PartialEq, Eq)]
 enum DecodeState {
     Start,
-    Value(BencodedValue),
+    Value(BencodeValue),
     ListStart,
     DictStart,
-    DictKey(String),
-    DictEntry(String, BencodedValue),
+    DictKey(BencodeString),
+    DictEntry(BencodeString, BencodeValue),
 }
 
 /// Decodes a bencoded value from the given input.
 ///
 /// # Arguments
 ///
-/// * `input` - A reference to a type that implements `AsRef<str>`, representing the bencoded value.
+/// * `input` - A reference to a type that implements `AsRef<[u8]>`, representing the bencoded value.
 ///
 /// # Returns
 ///
 /// * `Ok(usize, BencodedValue)` - The decoded value if the input is valid and the number of characters read.
 /// * `Err(_)` - If the input is not a valid bencoded value.
-pub fn decode<T>(input: &T) -> Result<(usize, BencodedValue), Error>
+pub fn decode<T>(input: &T) -> Result<(usize, BencodeValue), Error>
 where
-    T: AsRef<str>,
+    T: AsRef<[u8]>,
 {
     let input = input.as_ref();
     let len = input.len();
@@ -132,32 +147,32 @@ where
 
     let mut cursor = 0;
     while cursor < len {
-        let char = &input[cursor..cursor + 1];
+        let char = input[cursor] as char;
         let input_ = &input[cursor..];
         match char {
-            "i" => {
+            'i' => {
                 let value = decode_integer(&input_)?;
                 cursor += value.0;
                 let state = stack.pop().expect("Invalid stack state");
                 match state {
                     DecodeState::DictKey(key) => {
-                        stack.push(DecodeState::DictEntry(key, BencodedValue::Integer(value.1)));
+                        stack.push(DecodeState::DictEntry(key, BencodeValue::Integer(value.1)));
                     }
                     _ => {
                         stack.push(state);
-                        stack.push(DecodeState::Value(BencodedValue::Integer(value.1)));
+                        stack.push(DecodeState::Value(BencodeValue::Integer(value.1)));
                     }
                 }
             }
-            "l" => {
+            'l' => {
                 stack.push(DecodeState::ListStart);
                 cursor += 1;
             }
-            "d" => {
+            'd' => {
                 stack.push(DecodeState::DictStart);
                 cursor += 1;
             }
-            "e" => {
+            'e' => {
                 // End of dict/list
                 cursor += 1;
                 let mut values = Vec::new();
@@ -181,12 +196,12 @@ where
                                         DecodeState::DictKey(key) => {
                                             stack.push(DecodeState::DictEntry(
                                                 key,
-                                                BencodedValue::List(list),
+                                                BencodeValue::List(list),
                                             ));
                                         }
                                         _ => {
                                             stack.push(prev_state);
-                                            stack.push(DecodeState::Value(BencodedValue::List(
+                                            stack.push(DecodeState::Value(BencodeValue::List(
                                                 list,
                                             )));
                                         }
@@ -213,12 +228,12 @@ where
                                         DecodeState::DictKey(key) => {
                                             stack.push(DecodeState::DictEntry(
                                                 key,
-                                                BencodedValue::Dict(dict),
+                                                BencodeValue::Dict(dict),
                                             ));
                                         }
                                         _ => {
                                             stack.push(prev_state);
-                                            stack.push(DecodeState::Value(BencodedValue::Dict(
+                                            stack.push(DecodeState::Value(BencodeValue::Dict(
                                                 dict,
                                             )));
                                         }
@@ -249,7 +264,7 @@ where
                 cursor += value.0;
                 match state {
                     DecodeState::DictKey(key) => {
-                        stack.push(DecodeState::DictEntry(key, BencodedValue::String(value.1)));
+                        stack.push(DecodeState::DictEntry(key, BencodeValue::ByteString(value.1)));
                     }
                     DecodeState::DictEntry(_, _) => {
                         stack.push(state);
@@ -261,7 +276,7 @@ where
                     }
                     _ => {
                         stack.push(state);
-                        stack.push(DecodeState::Value(BencodedValue::String(value.1)));
+                        stack.push(DecodeState::Value(BencodeValue::ByteString(value.1)));
                     }
                 }
             }
@@ -283,187 +298,187 @@ mod tests {
 
     #[test]
     fn test_valid_bencoded_string() {
-        let input = "4:spam";
+        let input = b"4:spam";
         let result = decode_string(&input);
-        assert_eq!(result, Ok((6, "spam".to_string())));
+        assert_eq!(result, Ok((6, "spam".into())));
     }
 
     #[test]
     fn test_invalid_missing_separator() {
-        let input = "4spam";
+        let input = b"4spam";
         let result = decode_string(&input);
         assert!(matches!(result, Err(Error::InvalidString)));
     }
 
     #[test]
     fn test_invalid_non_digit_length() {
-        let input = "a:spam";
+        let input = b"a:spam";
         let result = decode_string(&input);
         assert!(matches!(result, Err(Error::InvalidString)));
     }
 
     #[test]
     fn test_invalid_negative_length() {
-        let input = "-1:spam";
+        let input = b"-1:spam";
         let result = decode_string(&input);
         assert!(matches!(result, Err(Error::InvalidString)));
     }
 
     #[test]
     fn test_invalid_length_exceeds_remaining() {
-        let input = "10:spam";
+        let input = b"10:spam";
         let result = decode_string(&input);
         assert!(matches!(result, Err(Error::InvalidString)));
     }
 
     #[test]
     fn test_empty_bencoded_string() {
-        let input = "0:";
+        let input = b"0:";
         let result = decode_string(&input);
-        assert_eq!(result, Ok((2, "".to_string())));
+        assert_eq!(result, Ok((2, "".into())));
     }
 
     #[test]
     fn test_valid_bencoded_string_with_numbers() {
-        let input = "5:12345";
+        let input = b"5:12345";
         let result = decode_string(&input);
-        assert_eq!(result, Ok((7, "12345".to_string())));
+        assert_eq!(result, Ok((7, "12345".into())));
     }
 
     #[test]
     fn test_valid_bencoded_string_with_special_characters() {
-        let input = "6:!@#$%^";
+        let input = b"6:!@#$%^";
         let result = decode_string(&input);
-        assert_eq!(result, Ok((8, "!@#$%^".to_string())));
+        assert_eq!(result, Ok((8, "!@#$%^".into())));
     }
 
     #[test]
     fn test_valid_bencoded_string_with_whitespace() {
-        let input = "5:hello";
+        let input = b"5:hello";
         let result = decode_string(&input);
-        assert_eq!(result, Ok((7, "hello".to_string())));
+        assert_eq!(result, Ok((7, "hello".into())));
     }
 
     #[test]
     fn test_invalid_empty_input() {
-        let input = "";
+        let input = b"";
         let result = decode_string(&input);
         assert!(matches!(result, Err(Error::InvalidString)));
     }
 
     #[test]
     fn test_valid_bencoded_integer() {
-        let input = "i42e";
+        let input = b"i42e";
         let result = decode_integer(&input);
         assert_eq!(result, Ok((4, 42)));
     }
 
     #[test]
     fn test_invalid_missing_start() {
-        let input = "42e";
+        let input = b"42e";
         let result = decode_integer(&input);
         assert!(matches!(result, Err(Error::InvalidInteger)));
     }
 
     #[test]
     fn test_invalid_missing_end() {
-        let input = "i42";
+        let input = b"i42";
         let result = decode_integer(&input);
         assert!(matches!(result, Err(Error::InvalidInteger)));
     }
 
     #[test]
     fn test_invalid_non_integer() {
-        let input = "i42a";
+        let input = b"i42a";
         let result = decode_integer(&input);
         assert!(matches!(result, Err(Error::InvalidInteger)));
     }
 
     #[test]
     fn test_valid_negative_integer() {
-        let input = "i-42e";
+        let input = b"i-42e";
         let result = decode_integer(&input);
         assert!(matches!(result, Ok((5, -42))));
     }
 
     #[test]
     fn test_valid_bencoded_integer_with_zeros() {
-        let input = "i000e";
+        let input = b"i000e";
         let result = decode_integer(&input);
         assert_eq!(result, Ok((5, 0)));
     }
 
     #[test]
     fn test_valid_bencoded_interger_zero() {
-        let input = "i0e";
+        let input = b"i0e";
         let result = decode_integer(&input);
         assert_eq!(result, Ok((3, 0)));
     }
 
     #[test]
     fn test_valid_bencoded_list() {
-        let input = "l4:spam4:eggse";
+        let input = b"l4:spam4:eggse";
         let result = decode(&input);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert_eq!(result.0, 14);
-        assert!(matches!(result.1, BencodedValue::List(_)));
+        assert!(matches!(result.1, BencodeValue::List(_)));
         let list = match result.1 {
-            BencodedValue::List(list) => list,
+            BencodeValue::List(list) => list,
             _ => panic!("Invalid value"),
         };
         assert_eq!(list.len(), 2);
-        assert_eq!(list[0], BencodedValue::String("spam".to_string()));
-        assert_eq!(list[1], BencodedValue::String("eggs".to_string()));
+        assert_eq!(list[0], BencodeValue::ByteString("spam".into()));
+        assert_eq!(list[1], BencodeValue::ByteString("eggs".into()));
     }
 
     #[test]
     fn test_valid_bencoded_dict() {
-        let input = "d3:cow3:moo4:spam4:eggse";
+        let input = b"d3:cow3:moo4:spam4:eggse";
         let result = decode(&input);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert_eq!(result.0, 24);
-        assert!(matches!(result.1, BencodedValue::Dict(_)));
+        assert!(matches!(result.1, BencodeValue::Dict(_)));
         let dict = match result.1 {
-            BencodedValue::Dict(dict) => dict,
+            BencodeValue::Dict(dict) => dict,
             _ => panic!("Invalid value"),
         };
         assert_eq!(dict.len(), 2);
         assert_eq!(
             dict[0],
-            ("cow".to_string(), BencodedValue::String("moo".to_string()))
+            ("cow".into(), BencodeValue::ByteString("moo".into()))
         );
         assert_eq!(
             dict[1],
             (
-                "spam".to_string(),
-                BencodedValue::String("eggs".to_string())
+                "spam".into(),
+                BencodeValue::ByteString("eggs".into())
             )
         );
     }
 
     #[test]
     fn test_valid_bencoded_dict_with_list() {
-        let input = "d4:spamli4ei-4ei0eee";
+        let input = b"d4:spamli4ei-4ei0eee";
         let result = decode(&input);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert_eq!(result.0, 20);
-        assert!(matches!(result.1, BencodedValue::Dict(_)));
+        assert!(matches!(result.1, BencodeValue::Dict(_)));
         let dict = match result.1 {
-            BencodedValue::Dict(dict) => dict,
+            BencodeValue::Dict(dict) => dict,
             _ => panic!("Invalid value"),
         };
         assert_eq!(dict.len(), 1);
         assert_eq!(
             dict[0],
             (
-                "spam".to_string(),
-                BencodedValue::List(vec![
-                    BencodedValue::Integer(4),
-                    BencodedValue::Integer(-4),
-                    BencodedValue::Integer(0),
+                "spam".into(),
+                BencodeValue::List(vec![
+                    BencodeValue::Integer(4),
+                    BencodeValue::Integer(-4),
+                    BencodeValue::Integer(0),
                 ])
             )
         );
@@ -471,48 +486,48 @@ mod tests {
 
     #[test]
     fn test_valid_bencoded_list_in_list() {
-        let input = "lli4ei-4ei0eee";
+        let input = b"lli4ei-4ei0eee";
         let result = decode(&input);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert_eq!(result.0, 14);
-        assert!(matches!(result.1, BencodedValue::List(_)));
+        assert!(matches!(result.1, BencodeValue::List(_)));
         let list = match result.1 {
-            BencodedValue::List(list) => list,
+            BencodeValue::List(list) => list,
             _ => panic!("Invalid value"),
         };
         assert_eq!(list.len(), 1);
-        assert!(matches!(list[0], BencodedValue::List(_)));
+        assert!(matches!(list[0], BencodeValue::List(_)));
         let inner_list = match &list[0] {
-            BencodedValue::List(list) => list,
+            BencodeValue::List(list) => list,
             _ => panic!("Invalid value"),
         };
         assert_eq!(inner_list.len(), 3);
-        assert_eq!(inner_list[0], BencodedValue::Integer(4));
-        assert_eq!(inner_list[1], BencodedValue::Integer(-4));
-        assert_eq!(inner_list[2], BencodedValue::Integer(0));
+        assert_eq!(inner_list[0], BencodeValue::Integer(4));
+        assert_eq!(inner_list[1], BencodeValue::Integer(-4));
+        assert_eq!(inner_list[2], BencodeValue::Integer(0));
     }
 
     #[test]
     fn test_valid_bencoded_dict_in_dict() {
-        let input = "d3:cowd3:moo4:spamee";
+        let input = b"d3:cowd3:moo4:spamee";
         let result = decode(&input);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert_eq!(result.0, 20);
-        assert!(matches!(result.1, BencodedValue::Dict(_)));
+        assert!(matches!(result.1, BencodeValue::Dict(_)));
         let dict = match result.1 {
-            BencodedValue::Dict(dict) => dict,
+            BencodeValue::Dict(dict) => dict,
             _ => panic!("Invalid value"),
         };
         assert_eq!(dict.len(), 1);
         assert_eq!(
             dict[0],
             (
-                "cow".to_string(),
-                BencodedValue::Dict(vec![(
-                    "moo".to_string(),
-                    BencodedValue::String("spam".to_string())
+                "cow".into(),
+                BencodeValue::Dict(vec![(
+                    "moo".into(),
+                    BencodeValue::ByteString("spam".into())
                 ),])
             )
         );

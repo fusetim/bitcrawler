@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    bencoding::{BencodedDict, BencodedValue},
+    bencoding::{BencodeDict, BencodeValue},
     kademlia::NodeId,
 };
 
@@ -93,40 +93,40 @@ impl<N: NodeId> Query<N> {
         }
     }
 
-    pub fn to_bencoded(&self) -> BencodedValue {
+    pub fn to_bencoded(&self) -> BencodeValue {
         let mut dictionary = HashMap::new();
         dictionary.insert(
             "t".to_string(),
-            BencodedValue::String(self.transaction_id.clone()),
+            BencodeValue::String(self.transaction_id.clone()),
         );
-        dictionary.insert("y".to_string(), BencodedValue::String("q".to_string()));
+        dictionary.insert("y".to_string(), BencodeValue::String("q".to_string()));
         dictionary.insert(
             "q".to_string(),
-            BencodedValue::String(self.query.get_query_type().to_string()),
+            BencodeValue::String(self.query.get_query_type().to_string()),
         );
         dictionary.insert(
             "a".to_string(),
-            BencodedValue::Dict(self.query.to_arguments().into_iter().collect()),
+            BencodeValue::Dict(self.query.to_arguments().into_iter().collect()),
         );
-        BencodedValue::Dict(dictionary.into_iter().collect())
+        BencodeValue::Dict(dictionary.into_iter().collect())
     }
 
-    pub fn try_from_bencoded(input: &BencodedValue) -> Result<Self, TryFromArgumentsError> {
+    pub fn try_from_bencoded(input: &BencodeValue) -> Result<Self, TryFromArgumentsError> {
         let dict = match input {
-            BencodedValue::Dict(dict) => dict,
+            BencodeValue::Dict(dict) => dict,
             _ => return Err("Invalid query - not a dictionary"),
         };
 
         let transaction_id = match dict.iter().find(|(key, _)| key == "t") {
-            Some((_, BencodedValue::String(transaction_id))) => transaction_id.clone(),
+            Some((_, BencodeValue::String(transaction_id))) => transaction_id.clone(),
             _ => return Err("Missing 't' field"),
         };
         let query_type = match dict.iter().find(|(key, _)| key == "q") {
-            Some((_, BencodedValue::String(query_type))) => query_type,
+            Some((_, BencodeValue::String(query_type))) => query_type,
             _ => return Err("Missing 'q' field"),
         };
         let arguments = match dict.iter().find(|(key, _)| key == "a") {
-            Some((_, BencodedValue::Dict(arguments))) => arguments,
+            Some((_, BencodeValue::Dict(arguments))) => arguments,
             _ => return Err("Missing 'a' field"),
         };
 
@@ -145,7 +145,7 @@ impl<N: NodeId> Query<N> {
 }
 
 impl<N: NodeId> QueryType<N> {
-    pub fn to_arguments(&self) -> HashMap<String, BencodedValue> {
+    pub fn to_arguments(&self) -> HashMap<String, BencodeValue> {
         match self {
             QueryType::Ping(ping) => ping.to_arguments(),
             QueryType::FindNode(find_node) => find_node.to_arguments(),
@@ -165,61 +165,61 @@ impl<N: NodeId> QueryType<N> {
 }
 
 impl<N: NodeId> ToArguments for Ping<N> {
-    fn to_arguments(&self) -> HashMap<String, BencodedValue> {
+    fn to_arguments(&self) -> HashMap<String, BencodeValue> {
         let mut arguments = HashMap::new();
-        arguments.insert("id".to_string(), BencodedValue::String(self.id.to_string()));
+        arguments.insert("id".to_string(), BencodeValue::String(self.id.to_string()));
         arguments
     }
 }
 
 impl<N: NodeId> ToArguments for FindNode<N> {
-    fn to_arguments(&self) -> HashMap<String, BencodedValue> {
+    fn to_arguments(&self) -> HashMap<String, BencodeValue> {
         let mut arguments = HashMap::new();
-        arguments.insert("id".to_string(), BencodedValue::String(self.id.to_string()));
+        arguments.insert("id".to_string(), BencodeValue::String(self.id.to_string()));
         arguments.insert(
             "target".to_string(),
-            BencodedValue::String(self.target.to_string()),
+            BencodeValue::String(self.target.to_string()),
         );
         arguments
     }
 }
 
 impl<N: NodeId> ToArguments for GetPeers<N> {
-    fn to_arguments(&self) -> HashMap<String, BencodedValue> {
+    fn to_arguments(&self) -> HashMap<String, BencodeValue> {
         let mut arguments = HashMap::new();
-        arguments.insert("id".to_string(), BencodedValue::String(self.id.to_string()));
+        arguments.insert("id".to_string(), BencodeValue::String(self.id.to_string()));
         arguments.insert(
             "info_hash".to_string(),
-            BencodedValue::String(self.info_hash.to_string()),
+            BencodeValue::String(self.info_hash.to_string()),
         );
         arguments
     }
 }
 
 impl<N: NodeId> ToArguments for AnnouncePeer<N> {
-    fn to_arguments(&self) -> HashMap<String, BencodedValue> {
+    fn to_arguments(&self) -> HashMap<String, BencodeValue> {
         let mut arguments = HashMap::new();
-        arguments.insert("id".to_string(), BencodedValue::String(self.id.to_string()));
+        arguments.insert("id".to_string(), BencodeValue::String(self.id.to_string()));
         arguments.insert(
             "info_hash".to_string(),
-            BencodedValue::String(self.info_hash.to_string()),
+            BencodeValue::String(self.info_hash.to_string()),
         );
-        arguments.insert("port".to_string(), BencodedValue::Integer(self.port as i64));
+        arguments.insert("port".to_string(), BencodeValue::Integer(self.port as i64));
         arguments.insert(
             "token".to_string(),
-            BencodedValue::String(self.token.clone()),
+            BencodeValue::String(self.token.clone()),
         );
         arguments
     }
 }
 
 impl<N: NodeId> TryFromArguments for Ping<N> {
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError> {
+    fn try_from_arguments(arguments: &BencodeDict) -> Result<Self, TryFromArgumentsError> {
         let (_, id) = arguments
             .iter()
             .find(|(key, _)| key == "id")
             .ok_or("Missing 'id' field")?;
-        if let BencodedValue::String(id) = id {
+        if let BencodeValue::String(id) = id {
             Ok(Ping {
                 id: N::from_str(id).or(Err("Invalid NodeId"))?,
             })
@@ -230,7 +230,7 @@ impl<N: NodeId> TryFromArguments for Ping<N> {
 }
 
 impl<N: NodeId> TryFromArguments for FindNode<N> {
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError> {
+    fn try_from_arguments(arguments: &BencodeDict) -> Result<Self, TryFromArgumentsError> {
         let (_, id) = arguments
             .iter()
             .find(|(key, _)| key == "id")
@@ -239,7 +239,7 @@ impl<N: NodeId> TryFromArguments for FindNode<N> {
             .iter()
             .find(|(key, _)| key == "target")
             .ok_or("Missing 'target' field")?;
-        if let (BencodedValue::String(id), BencodedValue::String(target)) = (id, target) {
+        if let (BencodeValue::String(id), BencodeValue::String(target)) = (id, target) {
             Ok(FindNode {
                 id: N::from_str(id).or(Err("Invalid NodeId"))?,
                 target: N::from_str(target).or(Err("Invalid NodeId"))?,
@@ -251,7 +251,7 @@ impl<N: NodeId> TryFromArguments for FindNode<N> {
 }
 
 impl<N: NodeId> TryFromArguments for GetPeers<N> {
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError> {
+    fn try_from_arguments(arguments: &BencodeDict) -> Result<Self, TryFromArgumentsError> {
         let (_, id) = arguments
             .iter()
             .find(|(key, _)| key == "id")
@@ -260,7 +260,7 @@ impl<N: NodeId> TryFromArguments for GetPeers<N> {
             .iter()
             .find(|(key, _)| key == "info_hash")
             .ok_or("Missing 'info_hash' field")?;
-        if let (BencodedValue::String(id), BencodedValue::String(info_hash)) = (id, info_hash) {
+        if let (BencodeValue::String(id), BencodeValue::String(info_hash)) = (id, info_hash) {
             Ok(GetPeers {
                 id: N::from_str(id).or(Err("Invalid NodeId"))?,
                 info_hash: N::from_str(info_hash).or(Err("Invalid NodeId/InfoHash"))?,
@@ -272,26 +272,26 @@ impl<N: NodeId> TryFromArguments for GetPeers<N> {
 }
 
 impl<N: NodeId> TryFromArguments for AnnouncePeer<N> {
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError> {
+    fn try_from_arguments(arguments: &BencodeDict) -> Result<Self, TryFromArgumentsError> {
         let (mut id, mut info_hash, mut port, mut token) = (None, None, None, None);
         for (key, value) in arguments {
             match key.as_str() {
                 "id" => {
-                    if let BencodedValue::String(id_) = value {
+                    if let BencodeValue::String(id_) = value {
                         id = Some(N::from_str(&id_).or(Err("Invalid NodeId"))?);
                     } else {
                         return Err("Invalid 'id' field");
                     }
                 }
                 "info_hash" => {
-                    if let BencodedValue::String(info_hash_) = value {
+                    if let BencodeValue::String(info_hash_) = value {
                         info_hash = Some(N::from_str(&info_hash_).or(Err("Invalid InfoHash"))?);
                     } else {
                         return Err("Invalid 'info_hash' field");
                     }
                 }
                 "port" => {
-                    if let BencodedValue::Integer(port_) = value {
+                    if let BencodeValue::Integer(port_) = value {
                         if *port_ < 0 || *port_ > u16::MAX as i64 {
                             return Err("Invalid 'port' field");
                         }
@@ -301,7 +301,7 @@ impl<N: NodeId> TryFromArguments for AnnouncePeer<N> {
                     }
                 }
                 "token" => {
-                    if let BencodedValue::String(token_) = value {
+                    if let BencodeValue::String(token_) = value {
                         token = Some(token_.clone());
                     } else {
                         return Err("Invalid 'token' field");
@@ -338,18 +338,18 @@ mod tests {
             }),
         );
         let mut bencoded = query.to_bencoded();
-        let mut expected = BencodedValue::Dict(
+        let mut expected = BencodeValue::Dict(
             vec![
                 (
                     "t".to_string(),
-                    BencodedValue::String("transaction_id".to_string()),
+                    BencodeValue::String("transaction_id".to_string()),
                 ),
-                ("y".to_string(), BencodedValue::String("q".to_string())),
-                ("q".to_string(), BencodedValue::String("ping".to_string())),
+                ("y".to_string(), BencodeValue::String("q".to_string())),
+                ("q".to_string(), BencodeValue::String("ping".to_string())),
                 (
                     "a".to_string(),
-                    BencodedValue::Dict(
-                        vec![("id".to_string(), BencodedValue::String("25".to_string()))]
+                    BencodeValue::Dict(
+                        vec![("id".to_string(), BencodeValue::String("25".to_string()))]
                             .into_iter()
                             .collect(),
                     ),

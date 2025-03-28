@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::Add};
 use std::str::FromStr;
 
 use crate::{
-    bencoding::{BencodedDict, BencodedValue},
+    bencoding::{BencodeDict, BencodeValue},
     kademlia::{Address, NodeId},
 };
 
@@ -70,23 +70,23 @@ impl<I: CompactNodeInfo> Response<I> {
         }
     }
 
-    pub fn to_bencoded(&self) -> BencodedValue {
+    pub fn to_bencoded(&self) -> BencodeValue {
         let mut dictionary = HashMap::new();
         dictionary.insert(
             "t".to_string(),
-            BencodedValue::String(self.transaction_id.clone()),
+            BencodeValue::String(self.transaction_id.clone()),
         );
-        dictionary.insert("y".to_string(), BencodedValue::String("r".to_string()));
+        dictionary.insert("y".to_string(), BencodeValue::String("r".to_string()));
         dictionary.insert(
             "r".to_string(),
-            BencodedValue::Dict(self.response.to_arguments().into_iter().collect()),
+            BencodeValue::Dict(self.response.to_arguments().into_iter().collect()),
         );
-        BencodedValue::Dict(dictionary.into_iter().collect())
+        BencodeValue::Dict(dictionary.into_iter().collect())
     }
 
-    pub fn try_from_ping_bencoded(bencoded: &BencodedValue) -> Result<Self, TryFromArgumentsError> {
+    pub fn try_from_ping_bencoded(bencoded: &BencodeValue) -> Result<Self, TryFromArgumentsError> {
         let bencoded = match bencoded {
-            BencodedValue::Dict(bencoded) => bencoded,
+            BencodeValue::Dict(bencoded) => bencoded,
             _ => return Err("Invalid response format"),
         };
 
@@ -94,7 +94,7 @@ impl<I: CompactNodeInfo> Response<I> {
             .iter()
             .find(|(key, _)| key == "y")
             .ok_or("Missing 'y' field")?;
-        if let BencodedValue::String(message_type) = message_type {
+        if let BencodeValue::String(message_type) = message_type {
             if message_type != "r" {
                 return Err("Invalid message type");
             }
@@ -107,7 +107,7 @@ impl<I: CompactNodeInfo> Response<I> {
             .find(|(key, _)| key == "t")
             .ok_or("Missing 't' field")?;
         let transaction_id = match transaction_id {
-            BencodedValue::String(transaction_id) => transaction_id,
+            BencodeValue::String(transaction_id) => transaction_id,
             _ => return Err("Invalid 't' field"),
         };
 
@@ -117,7 +117,7 @@ impl<I: CompactNodeInfo> Response<I> {
             .ok_or("Missing 'r' field")?;
 
         let response = match response {
-            BencodedValue::Dict(response) => response,
+            BencodeValue::Dict(response) => response,
             _ => return Err("Invalid 'r' field"),
         };
 
@@ -127,10 +127,10 @@ impl<I: CompactNodeInfo> Response<I> {
     }
 
     pub fn try_from_findpeer_bencoded(
-        bencoded: &BencodedValue,
+        bencoded: &BencodeValue,
     ) -> Result<Self, TryFromArgumentsError> {
         let bencoded = match bencoded {
-            BencodedValue::Dict(bencoded) => bencoded,
+            BencodeValue::Dict(bencoded) => bencoded,
             _ => return Err("Invalid response format"),
         };
 
@@ -138,7 +138,7 @@ impl<I: CompactNodeInfo> Response<I> {
             .iter()
             .find(|(key, _)| key == "y")
             .ok_or("Missing 'y' field")?;
-        if let BencodedValue::String(message_type) = message_type {
+        if let BencodeValue::String(message_type) = message_type {
             if message_type != "r" {
                 return Err("Invalid message type");
             }
@@ -151,7 +151,7 @@ impl<I: CompactNodeInfo> Response<I> {
             .find(|(key, _)| key == "t")
             .ok_or("Missing 't' field")?;
         let transaction_id = match transaction_id {
-            BencodedValue::String(transaction_id) => transaction_id,
+            BencodeValue::String(transaction_id) => transaction_id,
             _ => return Err("Invalid 't' field"),
         };
 
@@ -161,7 +161,7 @@ impl<I: CompactNodeInfo> Response<I> {
             .ok_or("Missing 'r' field")?;
 
         let response = match response {
-            BencodedValue::Dict(response) => response,
+            BencodeValue::Dict(response) => response,
             _ => return Err("Invalid 'r' field"),
         };
 
@@ -172,7 +172,7 @@ impl<I: CompactNodeInfo> Response<I> {
 }
 
 impl<I: CompactNodeInfo> ResponseType<I> {
-    pub fn to_arguments(&self) -> HashMap<String, BencodedValue> {
+    pub fn to_arguments(&self) -> HashMap<String, BencodeValue> {
         match self {
             ResponseType::Ping(ping) => ping.to_arguments(),
             ResponseType::FindNode(find_node) => find_node.to_arguments(),
@@ -188,20 +188,20 @@ impl<I: CompactNodeInfo> ResponseType<I> {
 }
 
 impl<N: NodeId> ToArguments for Ping<N> {
-    fn to_arguments(&self) -> HashMap<String, BencodedValue> {
+    fn to_arguments(&self) -> HashMap<String, BencodeValue> {
         let mut arguments = HashMap::new();
-        arguments.insert("id".to_string(), BencodedValue::String(self.id.to_string()));
+        arguments.insert("id".to_string(), BencodeValue::String(self.id.to_string()));
         arguments
     }
 }
 
 impl<N: NodeId> TryFromArguments for Ping<N> {
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError> {
+    fn try_from_arguments(arguments: &BencodeDict) -> Result<Self, TryFromArgumentsError> {
         let (_, id) = arguments
             .iter()
             .find(|(key, _)| key == "id")
             .ok_or("Missing 'id' field")?;
-        if let BencodedValue::String(id) = id {
+        if let BencodeValue::String(id) = id {
             Ok(Ping {
                 id: N::from_str(id).or(Err("Invalid NodeId"))?,
             })
@@ -215,17 +215,17 @@ impl<I> ToArguments for FindNode<I>
 where
     I: CompactNodeInfo,
 {
-    fn to_arguments(&self) -> HashMap<String, BencodedValue> {
+    fn to_arguments(&self) -> HashMap<String, BencodeValue> {
         let mut arguments = HashMap::new();
         arguments.insert(
             "id".to_string(),
-            BencodedValue::String(ToString::to_string(&self.id)),
+            BencodeValue::String(ToString::to_string(&self.id)),
         );
         let mut nodes = String::new();
         for node in &self.nodes {
             nodes.push_str(&node.write_compact_node_info());
         }
-        arguments.insert("nodes".to_string(), BencodedValue::String(nodes));
+        arguments.insert("nodes".to_string(), BencodeValue::String(nodes));
         arguments
     }
 }
@@ -234,13 +234,13 @@ impl<I> TryFromArguments for FindNode<I>
 where
     I: CompactNodeInfo,
 {
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError> {
+    fn try_from_arguments(arguments: &BencodeDict) -> Result<Self, TryFromArgumentsError> {
         let (_, id) = arguments
             .iter()
             .find(|(key, _)| key == "id")
             .ok_or("Missing 'id' field")?;
         let id = match id {
-            BencodedValue::String(id) => id,
+            BencodeValue::String(id) => id,
             _ => return Err("Invalid 'id' field"),
         };
 
@@ -249,7 +249,7 @@ where
             .find(|(key, _)| key == "nodes")
             .ok_or("Missing 'nodes' field")?;
         let node_list = match node_list {
-            BencodedValue::String(nodes) => nodes,
+            BencodeValue::String(nodes) => nodes,
             _ => return Err("Invalid 'nodes' field"),
         };
 
@@ -287,14 +287,14 @@ mod tests {
             }),
         );
         let mut bencoded = response.to_bencoded();
-        let mut expected = BencodedValue::Dict(vec![
-            ("t".to_string(), BencodedValue::String("123".to_string())),
-            ("y".to_string(), BencodedValue::String("r".to_string())),
+        let mut expected = BencodeValue::Dict(vec![
+            ("t".to_string(), BencodeValue::String("123".to_string())),
+            ("y".to_string(), BencodeValue::String("r".to_string())),
             (
                 "r".to_string(),
-                BencodedValue::Dict(vec![(
+                BencodeValue::Dict(vec![(
                     "id".to_string(),
-                    BencodedValue::String("123".to_string()),
+                    BencodeValue::String("123".to_string()),
                 )]),
             ),
         ]);
@@ -305,14 +305,14 @@ mod tests {
 
     #[test]
     fn test_ping_response_from_bencoded() {
-        let bencoded = BencodedValue::Dict(vec![
-            ("t".to_string(), BencodedValue::String("123".to_string())),
-            ("y".to_string(), BencodedValue::String("r".to_string())),
+        let bencoded = BencodeValue::Dict(vec![
+            ("t".to_string(), BencodeValue::String("123".to_string())),
+            ("y".to_string(), BencodeValue::String("r".to_string())),
             (
                 "r".to_string(),
-                BencodedValue::Dict(vec![(
+                BencodeValue::Dict(vec![(
                     "id".to_string(),
-                    BencodedValue::String("123".to_string()),
+                    BencodeValue::String("123".to_string()),
                 )]),
             ),
         ]);
@@ -369,19 +369,19 @@ mod tests {
             }),
         );
         let mut bencoded = response.to_bencoded();
-        let mut expected = BencodedValue::Dict(vec![
-            ("t".to_string(), BencodedValue::String("123".to_string())),
-            ("y".to_string(), BencodedValue::String("r".to_string())),
+        let mut expected = BencodeValue::Dict(vec![
+            ("t".to_string(), BencodeValue::String("123".to_string())),
+            ("y".to_string(), BencodeValue::String("r".to_string())),
             (
                 "r".to_string(),
-                BencodedValue::Dict(vec![
+                BencodeValue::Dict(vec![
                     (
                         "id".to_string(),
-                        BencodedValue::String("123".to_string()),
+                        BencodeValue::String("123".to_string()),
                     ),
                     (
                         "nodes".to_string(),
-                        BencodedValue::String(
+                        BencodeValue::String(
                             "1234560102030412345600050607085678".to_string(),
                         ),
                     ),
