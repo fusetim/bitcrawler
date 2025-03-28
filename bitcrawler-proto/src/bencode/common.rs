@@ -33,7 +33,7 @@ impl BencodeValue {
         BencodeValue::ByteString(BencodeString(input.into_bytes()))
     }
 
-    pub fn from_integer<I>(input: I) -> Self 
+    pub fn from_integer<I>(input: I) -> Self
     where
         I: Into<i128>,
     {
@@ -102,7 +102,6 @@ impl<'a> From<&'a BencodeString> for Cow<'a, BencodeString> {
         Cow::Borrowed(input)
     }
 }
-
 
 impl From<BencodeString> for Vec<u8> {
     fn from(input: BencodeString) -> Self {

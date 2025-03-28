@@ -3,12 +3,12 @@ use std::{borrow::Cow, io::Write};
 use super::{BencodeString, BencodeValue};
 
 /// Write a byte string (as bencode) to the output.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `input` - The string to write.
 /// * `output` - The output stream to write to.
-pub fn write_string<'a, T, W>(input: T, mut output: W) 
+pub fn write_string<'a, T, W>(input: T, mut output: W)
 where
     T: Into<Cow<'a, BencodeString>>,
     W: std::io::Write,
@@ -22,17 +22,17 @@ where
 }
 
 /// Write an integer (as bencode) to the output.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `input` - The integer to write.
 /// * `output` - The output stream to write to.
-/// 
+///
 /// # Notes
-/// 
+///
 /// * Supported integer types are `i8`, `i16`, `i32`, `i64`, `u64` and `i128`.
-/// 
-pub fn write_integer<T, W>(input: T, mut output: W) 
+///
+pub fn write_integer<T, W>(input: T, mut output: W)
 where
     T: Into<i128>,
     W: std::io::Write,
@@ -236,10 +236,7 @@ mod tests {
     #[test]
     fn encode_test_dict() {
         let result = encode(&BencodeValue::Dict(vec![
-            (
-                "hello".into(),
-                BencodeValue::ByteString("world".into()),
-            ),
+            ("hello".into(), BencodeValue::ByteString("world".into())),
             ("world".into(), BencodeValue::Integer(42)),
         ]));
         assert_eq!(result, b"d5:hello5:world5:worldi42ee");
@@ -260,22 +257,19 @@ mod tests {
     #[test]
     fn encode_test_nested_dict() {
         let result = encode(&BencodeValue::Dict(vec![
-            (
-                "hello".into(),
-                BencodeValue::ByteString("world".into()),
-            ),
+            ("hello".into(), BencodeValue::ByteString("world".into())),
             (
                 "world".into(),
                 BencodeValue::Dict(vec![
-                    (
-                        "hello".into(),
-                        BencodeValue::ByteString("world".into()),
-                    ),
+                    ("hello".into(), BencodeValue::ByteString("world".into())),
                     ("world".into(), BencodeValue::Integer(42)),
                 ]),
             ),
         ]));
-        assert_eq!(result, b"d5:hello5:world5:worldd5:hello5:world5:worldi42eee");
+        assert_eq!(
+            result,
+            b"d5:hello5:world5:worldd5:hello5:world5:worldi42eee"
+        );
     }
 
     #[test]
@@ -283,10 +277,7 @@ mod tests {
         let result = encode(&BencodeValue::Dict(vec![
             ("t".into(), BencodeValue::ByteString("aa".into())),
             ("y".into(), BencodeValue::ByteString("q".into())),
-            (
-                "q".into(),
-                BencodeValue::ByteString("announce_peer".into()),
-            ),
+            ("q".into(), BencodeValue::ByteString("announce_peer".into())),
             (
                 "a".into(),
                 BencodeValue::Dict(vec![
@@ -299,10 +290,7 @@ mod tests {
                         BencodeValue::ByteString("mnopqrstuvwxyz123456".into()),
                     ),
                     ("port".into(), BencodeValue::Integer(6881)),
-                    (
-                        "token".into(),
-                        BencodeValue::ByteString("aoeusnth".into()),
-                    ),
+                    ("token".into(), BencodeValue::ByteString("aoeusnth".into())),
                     ("implied_port".into(), BencodeValue::Integer(1)),
                 ]),
             ),

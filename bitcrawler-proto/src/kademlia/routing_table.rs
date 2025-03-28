@@ -10,7 +10,17 @@ pub trait Address: PartialEq + Debug {}
 /// distributed system. This trait is intended to be implemented by types that
 /// represent node identifiers, such as public keys or hashes.
 pub trait NodeId:
-    PartialEq + Debug + Eq + Xorable + PartialOrd + Ord + Clone + for<'a> TryFrom<&'a [u8]> + Into<Vec<u8>> { }
+    PartialEq
+    + Debug
+    + Eq
+    + Xorable
+    + PartialOrd
+    + Ord
+    + Clone
+    + for<'a> TryFrom<&'a [u8]>
+    + Into<Vec<u8>>
+{
+}
 
 /// A trait that defines operations for comparing and calculating distances
 /// between elements in a XOR-based metric space, commonly used in distributed

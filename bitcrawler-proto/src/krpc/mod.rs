@@ -151,14 +151,17 @@ mod tests {
             node_id.copy_from_slice(&data[0..8]);
             let ip = [data[8], data[9], data[10], data[11]];
             let port = u16::from_be_bytes([data[12], data[13]]);
-            Ok((14, MockNodeInfo {
-                node_id: MockNodeId(u64::from_be_bytes(node_id)),
-                ip,
-                port,
-            }))
+            Ok((
+                14,
+                MockNodeInfo {
+                    node_id: MockNodeId(u64::from_be_bytes(node_id)),
+                    ip,
+                    port,
+                },
+            ))
         }
 
-        fn write_compact_node_info(&self) -> Vec<u8>{
+        fn write_compact_node_info(&self) -> Vec<u8> {
             let mut data = Vec::with_capacity(6);
             data.extend_from_slice(&self.node_id.0.to_be_bytes());
             data.extend_from_slice(&self.ip);
@@ -167,7 +170,7 @@ mod tests {
         }
     }
 
-    impl<'a> TryFrom<&'a[u8]> for MockNodeId {
+    impl<'a> TryFrom<&'a [u8]> for MockNodeId {
         type Error = &'static str;
 
         fn try_from(value: &'a [u8]) -> Result<Self, Self::Error> {

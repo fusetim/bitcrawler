@@ -167,7 +167,7 @@ impl<N: NodeId> QueryType<N> {
 impl<N: NodeId> ToArguments for Ping<N> {
     fn to_arguments(&self) -> HashMap<BencodeString, BencodeValue> {
         let mut arguments = HashMap::new();
-        let id : Vec<u8> = self.id.clone().into();
+        let id: Vec<u8> = self.id.clone().into();
         arguments.insert("id".into(), BencodeValue::ByteString(id.into()));
         arguments
     }
@@ -176,13 +176,10 @@ impl<N: NodeId> ToArguments for Ping<N> {
 impl<N: NodeId> ToArguments for FindNode<N> {
     fn to_arguments(&self) -> HashMap<BencodeString, BencodeValue> {
         let mut arguments = HashMap::new();
-        let id : Vec<u8> = self.id.clone().into();
-        let target : Vec<u8> = self.target.clone().into();
+        let id: Vec<u8> = self.id.clone().into();
+        let target: Vec<u8> = self.target.clone().into();
         arguments.insert("id".into(), BencodeValue::ByteString(id.into()));
-        arguments.insert(
-            "target".into(),
-            BencodeValue::ByteString(target.into()),
-        );
+        arguments.insert("target".into(), BencodeValue::ByteString(target.into()));
         arguments
     }
 }
@@ -190,8 +187,8 @@ impl<N: NodeId> ToArguments for FindNode<N> {
 impl<N: NodeId> ToArguments for GetPeers<N> {
     fn to_arguments(&self) -> HashMap<BencodeString, BencodeValue> {
         let mut arguments = HashMap::new();
-        let id : Vec<u8> = self.id.clone().into();
-        let info_hash : Vec<u8> = self.info_hash.clone().into();
+        let id: Vec<u8> = self.id.clone().into();
+        let info_hash: Vec<u8> = self.info_hash.clone().into();
         arguments.insert("id".into(), BencodeValue::ByteString(id.into()));
         arguments.insert(
             "info_hash".into(),
@@ -204,18 +201,15 @@ impl<N: NodeId> ToArguments for GetPeers<N> {
 impl<N: NodeId> ToArguments for AnnouncePeer<N> {
     fn to_arguments(&self) -> HashMap<BencodeString, BencodeValue> {
         let mut arguments = HashMap::new();
-        let id : Vec<u8> = self.id.clone().into();
-        let info_hash : Vec<u8> = self.info_hash.clone().into();
+        let id: Vec<u8> = self.id.clone().into();
+        let info_hash: Vec<u8> = self.info_hash.clone().into();
         arguments.insert("id".into(), BencodeValue::ByteString(id.into()));
         arguments.insert(
             "info_hash".into(),
             BencodeValue::ByteString(info_hash.into()),
         );
         arguments.insert("port".into(), BencodeValue::Integer(self.port as i128));
-        arguments.insert(
-            "token".into(),
-            BencodeValue::ByteString(self.token.clone()),
-        );
+        arguments.insert("token".into(), BencodeValue::ByteString(self.token.clone()));
         arguments
     }
 }
@@ -267,10 +261,11 @@ impl<N: NodeId> TryFromArguments for GetPeers<N> {
             .iter()
             .find(|(key, _)| key.as_ref() == b"info_hash")
             .ok_or("Missing 'info_hash' field")?;
-        if let (BencodeValue::ByteString(id), BencodeValue::ByteString(info_hash)) = (id, info_hash) {
+        if let (BencodeValue::ByteString(id), BencodeValue::ByteString(info_hash)) = (id, info_hash)
+        {
             Ok(GetPeers {
                 id: N::try_from(id.as_ref()).or(Err("Invalid NodeId"))?,
-                info_hash: N::try_from(id.as_ref()).or(Err("Invalid NodeId/InfoHash"))?,
+                info_hash: N::try_from(info_hash.as_ref()).or(Err("Invalid NodeId/InfoHash"))?,
             })
         } else {
             Err("Invalid 'id' or 'info_hash' field")
@@ -292,7 +287,8 @@ impl<N: NodeId> TryFromArguments for AnnouncePeer<N> {
                 }
                 b"info_hash" => {
                     if let BencodeValue::ByteString(info_hash_) = value {
-                        info_hash = Some(N::try_from(info_hash_.as_ref()).or(Err("Invalid InfoHash"))?);
+                        info_hash =
+                            Some(N::try_from(info_hash_.as_ref()).or(Err("Invalid InfoHash"))?);
                     } else {
                         return Err("Invalid 'info_hash' field");
                     }
@@ -337,13 +333,13 @@ mod tests {
 
     #[test]
     fn test_ping_query_to_bencoded() {
-        let nodeId = MockNodeId::try_from(&b"25000000"[..]).unwrap();
-        let nodeId_ : Vec<u8> = nodeId.clone().into();
+        let node_id = MockNodeId::try_from(&b"25000000"[..]).unwrap();
+        let node_id_: Vec<u8> = node_id.clone().into();
 
         let query = Query::new(
             "transaction_id",
             QueryType::Ping(Ping {
-                id: nodeId.clone(),
+                id: node_id.clone(),
             }),
         );
         let mut bencoded = query.to_bencoded();
@@ -358,7 +354,7 @@ mod tests {
                 (
                     "a".into(),
                     BencodeValue::Dict(
-                        vec![("id".into(), BencodeValue::ByteString(nodeId_.into()))]
+                        vec![("id".into(), BencodeValue::ByteString(node_id_.into()))]
                             .into_iter()
                             .collect(),
                     ),

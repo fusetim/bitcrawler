@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use std::str::FromStr;
-
 use crate::{
     bencode::{BencodeDict, BencodeString, BencodeValue},
     kademlia::NodeId,
@@ -271,9 +269,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use super::super::tests::{MockAddress, MockNodeId, MockNodeInfo};
+    use super::super::tests::{MockNodeId, MockNodeInfo};
     use super::*;
 
     #[test]
@@ -290,7 +286,10 @@ mod tests {
             ("y".into(), BencodeValue::ByteString("r".into())),
             (
                 "r".into(),
-                BencodeValue::Dict(vec![("id".into(), BencodeValue::ByteString(vec![0, 0, 0, 0, 0, 0, 0, 123].into()))]),
+                BencodeValue::Dict(vec![(
+                    "id".into(),
+                    BencodeValue::ByteString(vec![0, 0, 0, 0, 0, 0, 0, 123].into()),
+                )]),
             ),
         ]);
         bencoded.sort_keys();

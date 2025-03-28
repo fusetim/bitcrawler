@@ -196,11 +196,7 @@ mod tests {
         let error = ErrorMessage::try_from_bencoded(&bencoded).unwrap();
         assert_eq!(
             error,
-            ErrorMessage::new(
-                "123",
-                ErrorCode::GenericError,
-                "error message".to_string()
-            )
+            ErrorMessage::new("123", ErrorCode::GenericError, "error message".to_string())
         );
     }
 }

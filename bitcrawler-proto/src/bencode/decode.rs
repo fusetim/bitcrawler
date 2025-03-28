@@ -45,7 +45,7 @@ where
         .ok_or(Error::InvalidString)?;
     let length = {
         let length_str = &input[0..separator_index];
-        let mut value  = 0;
+        let mut value = 0;
         for &c in length_str {
             if c < b'0' || c > b'9' {
                 return Err(Error::InvalidString);
@@ -65,7 +65,9 @@ where
         // The length is the number of bytes to read a fortiori.
         return Ok((
             separator_index + length + 1,
-            input[separator_index + 1..separator_index + 1 + length].to_vec().into(),
+            input[separator_index + 1..separator_index + 1 + length]
+                .to_vec()
+                .into(),
         ));
     }
 }
@@ -101,7 +103,10 @@ where
     if input[0] != b'i' {
         return Err(Error::InvalidInteger);
     }
-    let end_index = input.iter().position(|&c| c == b'e').ok_or(Error::InvalidInteger)?;
+    let end_index = input
+        .iter()
+        .position(|&c| c == b'e')
+        .ok_or(Error::InvalidInteger)?;
     if end_index == 0 {
         return Err(Error::InvalidInteger);
     }
@@ -201,9 +206,8 @@ where
                                         }
                                         _ => {
                                             stack.push(prev_state);
-                                            stack.push(DecodeState::Value(BencodeValue::List(
-                                                list,
-                                            )));
+                                            stack
+                                                .push(DecodeState::Value(BencodeValue::List(list)));
                                         }
                                     }
                                 } else {
@@ -233,9 +237,8 @@ where
                                         }
                                         _ => {
                                             stack.push(prev_state);
-                                            stack.push(DecodeState::Value(BencodeValue::Dict(
-                                                dict,
-                                            )));
+                                            stack
+                                                .push(DecodeState::Value(BencodeValue::Dict(dict)));
                                         }
                                     }
                                 } else {
@@ -264,7 +267,10 @@ where
                 cursor += value.0;
                 match state {
                     DecodeState::DictKey(key) => {
-                        stack.push(DecodeState::DictEntry(key, BencodeValue::ByteString(value.1)));
+                        stack.push(DecodeState::DictEntry(
+                            key,
+                            BencodeValue::ByteString(value.1),
+                        ));
                     }
                     DecodeState::DictEntry(_, _) => {
                         stack.push(state);
@@ -451,10 +457,7 @@ mod tests {
         );
         assert_eq!(
             dict[1],
-            (
-                "spam".into(),
-                BencodeValue::ByteString("eggs".into())
-            )
+            ("spam".into(), BencodeValue::ByteString("eggs".into()))
         );
     }
 

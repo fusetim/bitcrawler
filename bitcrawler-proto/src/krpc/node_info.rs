@@ -1,6 +1,4 @@
-use std::borrow::Cow;
-
-use crate::kademlia::{Address, NodeId};
+use crate::kademlia::NodeId;
 
 /// Node Info represents a discovered node (id, address, port) in the network.
 pub trait NodeInfo: PartialEq + Eq + Clone {
