@@ -6,7 +6,7 @@ pub mod response;
 use std::collections::HashMap;
 
 use crate::{
-    bencoding::{BencodedDict, BencodedValue},
+    bencode::{BencodeDict, BencodeString, BencodeValue},
     kademlia::NodeId,
 };
 pub use error::*;
@@ -40,7 +40,7 @@ pub trait BencodedMessage {
     /// # Returns
     ///
     /// A `BencodedValue` representation of the message.
-    fn to_bencoded(&self) -> BencodedValue;
+    fn to_bencoded(&self) -> BencodeValue;
 
     /// Constructs an instance of the message from a `BencodedValue`.
     ///
@@ -51,34 +51,34 @@ pub trait BencodedMessage {
     /// # Returns
     ///
     /// A new instance of the message if the `BencodedValue` is valid, otherwise an error message.
-    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, &'static str>
+    fn try_from_bencoded(input: &BencodeValue) -> Result<Self, &'static str>
     where
         Self: Sized;
 }
 
 impl<N: NodeId> BencodedMessage for Message<N> {
-    fn to_bencoded(&self) -> BencodedValue {
+    fn to_bencoded(&self) -> BencodeValue {
         match self {
             Message::Query(query) => query.to_bencoded(),
             Message::Error(error) => error.to_bencoded(),
         }
     }
 
-    fn try_from_bencoded(input: &BencodedValue) -> Result<Self, &'static str> {
+    fn try_from_bencoded(input: &BencodeValue) -> Result<Self, &'static str> {
         let dict = match input {
-            BencodedValue::Dict(dict) => dict,
+            BencodeValue::Dict(dict) => dict,
             _ => return Err("Invalid message format"),
         };
 
-        let y = match dict.iter().find(|(key, _)| key == "y") {
-            Some((_, BencodedValue::String(y))) => y,
+        let y = match dict.iter().find(|(key, _)| key.as_ref() == b"y".as_ref()) {
+            Some((_, BencodeValue::ByteString(y))) => y,
             _ => return Err("Missing 'y' key"),
         };
 
-        match y.as_str() {
-            "q" => query::Query::try_from_bencoded(input).map(Message::Query),
-            //"r" => response::Response::try_from_bencoded(input).map(Message::Query),
-            "e" => error::ErrorMessage::try_from_bencoded(input).map(Message::Error),
+        match y.as_ref() {
+            b"q" => query::Query::try_from_bencoded(input).map(Message::Query),
+            //"r" => response::Response::try_from_bencoded(input).map(Message::Response),
+            b"e" => error::ErrorMessage::try_from_bencoded(input).map(Message::Error),
             _ => Err("Invalid message type"),
         }
     }
@@ -87,14 +87,14 @@ impl<N: NodeId> BencodedMessage for Message<N> {
 /// A trait for converting a type into a collection of key-value pairs, called arguments in the KRPC protocol.
 pub trait ToArguments {
     /// Converts the implementing type into a collection of key-value pairs.
-    fn to_arguments(&self) -> HashMap<String, BencodedValue>;
+    fn to_arguments(&self) -> HashMap<BencodeString, BencodeValue>;
 }
 
 /// A trait for converting a collection of key-value pairs, called arguments in the KRPC protocol, into a type.
 pub type TryFromArgumentsError = &'static str;
 pub trait TryFromArguments {
     /// Constructs an instance of the implementing type from a collection of key-value pairs.
-    fn try_from_arguments(arguments: &BencodedDict) -> Result<Self, TryFromArgumentsError>
+    fn try_from_arguments(arguments: &BencodeDict) -> Result<Self, TryFromArgumentsError>
     where
         Self: Sized;
 }
@@ -102,7 +102,6 @@ pub trait TryFromArguments {
 #[cfg(test)]
 mod tests {
     use super::{node_info::CompactNodeInfo, *};
-    use std::str::FromStr;
 
     use crate::kademlia::Xorable;
 
@@ -144,47 +143,46 @@ mod tests {
     impl CompactNodeInfo for MockNodeInfo {
         type Error = &'static str;
 
-        fn try_read_compact_node_info(data: &str) -> Result<(usize, Self), Self::Error> {
-            let mut iter = data.bytes();
-            let node_id = MockNodeId(
-                iter.by_ref()
-                    .take(8)
-                    .fold(0u64, |acc, x| (acc << 8) | x as u64),
-            );
-            let ip = [
-                iter.next().ok_or("Invalid compact node info")?,
-                iter.next().ok_or("Invalid compact node info")?,
-                iter.next().ok_or("Invalid compact node info")?,
-                iter.next().ok_or("Invalid compact node info")?,
-            ];
-            let port = ((iter.next().ok_or("Invalid compact node info")? as u16) << 8)
-                | iter.next().ok_or("Invalid compact node info")? as u16;
-            Ok((14, MockNodeInfo { node_id, ip, port }))
+        fn try_read_compact_node_info(data: &[u8]) -> Result<(usize, Self), Self::Error> {
+            if data.len() < 14 {
+                return Err("Invalid length for compact node info");
+            }
+            let mut node_id = [0u8; 8];
+            node_id.copy_from_slice(&data[0..8]);
+            let ip = [data[8], data[9], data[10], data[11]];
+            let port = u16::from_be_bytes([data[12], data[13]]);
+            Ok((14, MockNodeInfo {
+                node_id: MockNodeId(u64::from_be_bytes(node_id)),
+                ip,
+                port,
+            }))
         }
 
-        fn write_compact_node_info(&self) -> std::borrow::Cow<str> {
+        fn write_compact_node_info(&self) -> Vec<u8>{
             let mut data = Vec::with_capacity(6);
             data.extend_from_slice(&self.node_id.0.to_be_bytes());
             data.extend_from_slice(&self.ip);
             data.extend_from_slice(&self.port.to_be_bytes());
-            String::from_utf8(data).unwrap().into()
+            data
         }
     }
 
-    impl FromStr for MockNodeId {
-        type Err = &'static str;
+    impl<'a> TryFrom<&'a[u8]> for MockNodeId {
+        type Error = &'static str;
 
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s.parse::<u64>() {
-                Ok(id) => Ok(MockNodeId(id)),
-                Err(_) => Err("Invalid NodeId"),
+        fn try_from(value: &'a [u8]) -> Result<Self, Self::Error> {
+            if value.len() != 8 {
+                return Err("Invalid length for MockNodeId");
             }
+            let mut array = [0u8; 8];
+            array.copy_from_slice(value);
+            Ok(MockNodeId(u64::from_be_bytes(array)))
         }
     }
 
-    impl ToString for MockNodeId {
-        fn to_string(&self) -> String {
-            self.0.to_string()
+    impl Into<Vec<u8>> for MockNodeId {
+        fn into(self) -> Vec<u8> {
+            self.0.to_be_bytes().to_vec()
         }
     }
 

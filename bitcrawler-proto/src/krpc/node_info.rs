@@ -46,14 +46,14 @@ pub trait CompactNodeInfo: NodeInfo {
     /// # Errors
     ///
     /// An error is returned if the string does not contain a valid compact node info.
-    fn try_read_compact_node_info(data: &str) -> Result<(usize, Self), Self::Error>;
+    fn try_read_compact_node_info(data: &[u8]) -> Result<(usize, Self), Self::Error>;
 
     /// Produces a compact node info from the given node info.
     ///
     /// # Returns
     ///
     /// A string (CoW) containing the compact node info.
-    fn write_compact_node_info(&self) -> Cow<str>;
+    fn write_compact_node_info(&self) -> Vec<u8>;
 }
 
 /// A typical IPv4 implementation of `NodeInfo` for a node in the KRPC protocol.

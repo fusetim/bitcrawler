@@ -1,7 +1,5 @@
 use std::cmp::{Ordering, min};
 use std::fmt::Debug;
-use std::str::FromStr;
-
 /// An `Address` is a type that represents a network address that can be used to
 /// contact a node in a distributed system. This trait is intended to be
 /// implemented by types that represent network addresses, such as IP addresses
@@ -12,9 +10,7 @@ pub trait Address: PartialEq + Debug {}
 /// distributed system. This trait is intended to be implemented by types that
 /// represent node identifiers, such as public keys or hashes.
 pub trait NodeId:
-    PartialEq + Debug + Eq + Xorable + PartialOrd + Ord + Clone + ToString + FromStr
-{
-}
+    PartialEq + Debug + Eq + Xorable + PartialOrd + Ord + Clone + for<'a> TryFrom<&'a [u8]> + Into<Vec<u8>> { }
 
 /// A trait that defines operations for comparing and calculating distances
 /// between elements in a XOR-based metric space, commonly used in distributed
