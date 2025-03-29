@@ -166,6 +166,14 @@ impl<I: CompactNodeInfo> Response<I> {
 
         Ok(Response::new(transaction_id.clone(), response_type))
     }
+
+    pub fn get_transaction_id(&self) -> &BencodeString {
+        &self.transaction_id
+    }
+
+    pub fn get_response_type(&self) -> &ResponseType<I> {
+        &self.response
+    }
 }
 
 impl<I: CompactNodeInfo> ResponseType<I> {
@@ -181,6 +189,12 @@ impl<I: CompactNodeInfo> ResponseType<I> {
             ResponseType::Ping(_) => QUERY_TYPE_PING,
             ResponseType::FindNode(_) => QUERY_TYPE_FIND_NODE,
         }
+    }
+}
+
+impl<N: NodeId> Ping<N> {
+    pub fn get_id(&self) -> &N {
+        &self.id
     }
 }
 

@@ -93,6 +93,40 @@ impl<N: NodeId> Query<N> {
         }
     }
 
+    pub fn new_ping(transaction_id: impl Into<BencodeString>, id: N) -> Self {
+        Query::new(transaction_id, QueryType::Ping(Ping { id }))
+    }
+
+    pub fn new_find_node(
+        transaction_id: impl Into<BencodeString>,
+        id: N,
+        target: N,
+    ) -> Self {
+        Query::new(transaction_id, QueryType::FindNode(FindNode { id, target }))
+    }
+
+    pub fn new_get_peers(transaction_id: impl Into<BencodeString>, id: N, info_hash: N) -> Self {
+        Query::new(transaction_id, QueryType::GetPeers(GetPeers { id, info_hash }))
+    }
+
+    pub fn new_announce_peer(
+        transaction_id: impl Into<BencodeString>,
+        id: N,
+        info_hash: N,
+        port: u16,
+        token: BencodeString,
+    ) -> Self {
+        Query::new(
+            transaction_id,
+            QueryType::AnnouncePeer(AnnouncePeer {
+                id,
+                info_hash,
+                port,
+                token,
+            }),
+        )
+    }
+
     pub fn to_bencoded(&self) -> BencodeValue {
         let mut dictionary = HashMap::new();
         dictionary.insert(
@@ -108,7 +142,9 @@ impl<N: NodeId> Query<N> {
             "a".into(),
             BencodeValue::Dict(self.query.to_arguments().into_iter().collect()),
         );
-        BencodeValue::Dict(dictionary.into_iter().collect())
+        let mut bencode = BencodeValue::Dict(dictionary.into_iter().collect());
+        bencode.sort_keys();
+        bencode
     }
 
     pub fn try_from_bencoded(input: &BencodeValue) -> Result<Self, TryFromArgumentsError> {
