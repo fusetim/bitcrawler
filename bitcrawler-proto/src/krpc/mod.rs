@@ -1,5 +1,6 @@
 mod error;
 pub mod node_info;
+pub mod peer_info;
 pub mod query;
 pub mod response;
 
@@ -101,7 +102,7 @@ pub trait TryFromArguments {
 
 #[cfg(test)]
 mod tests {
-    use super::{node_info::CompactNodeInfo, *};
+    use super::{node_info::CompactNodeInfo, peer_info::CompactPeerInfo, *};
 
     use crate::kademlia::Xorable;
 
@@ -109,6 +110,8 @@ mod tests {
     pub struct MockNodeId(pub u64);
 
     pub type MockNodeInfo = node_info::BittorrentNodeInfoV4<MockNodeId>;
+
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct MockAddress {
         pub ip: [u8; 4],
         pub port: u16,
@@ -201,6 +204,32 @@ mod tests {
                 count += 1;
             }
             return count;
+        }
+    }
+
+    impl CompactPeerInfo for MockAddress {
+        type Error = &'static str;
+
+        fn try_read_compact_peer_info(data: &[u8]) -> Result<(usize, Self), Self::Error> {
+            if data.len() < 6 {
+                return Err("Invalid length for compact peer info");
+            }
+            let ip = [data[0], data[1], data[2], data[3]];
+            let port = u16::from_be_bytes([data[4], data[5]]);
+            Ok((
+                6,
+                MockAddress {
+                    ip,
+                    port,
+                },
+            ))
+        }
+
+        fn write_compact_peer_info(&self) -> Vec<u8> {
+            let mut data = Vec::with_capacity(6);
+            data.extend_from_slice(&self.ip);
+            data.extend_from_slice(&self.port.to_be_bytes());
+            data
         }
     }
 }
